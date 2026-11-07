@@ -15,7 +15,7 @@ import math
 import bmesh
 import bpy
 
-from . import assets
+from . import assets, library
 
 ASSETS = set(assets.DEFAULT_COLORS)
 OPS = {"add", "modify", "delete", "animate", "bounce"}
@@ -66,6 +66,8 @@ def _material(name: str, hex_color: str, emission: float = 0.0):
 
 def _set_color(mat, hex_color: str) -> None:
     lin = hex_to_linear(hex_color)
+    if library.set_tint(mat, lin):  # textured library asset: tint, don't flatten the texture
+        return
     mat.diffuse_color = lin  # solid-mode viewport color
     bsdf = mat.node_tree.nodes.get("Principled BSDF") if mat.node_tree else None
     if bsdf is not None:
@@ -76,6 +78,11 @@ def _main_color(obj) -> str | None:
     if not obj.material_slots or obj.material_slots[0].material is None:
         return None
     mat = obj.material_slots[0].material
+    tint = library.get_tint(mat)
+    if tint == "untinted":
+        return obj.get("director_color")  # library asset never recolored: report the color it was added with
+    if tint is not None:
+        return linear_to_hex(tint)
     bsdf = mat.node_tree.nodes.get("Principled BSDF") if mat.node_tree else None
     rgba = bsdf.inputs["Base Color"].default_value if bsdf is not None else mat.diffuse_color
     return linear_to_hex(rgba)
@@ -176,6 +183,17 @@ def _seed(oid: str) -> int:
 
 def _add(op: dict) -> None:
     oid, asset = op["id"], op["asset"]
+    obj = library.instantiate(asset, oid)
+    if obj is not None:  # prebuilt library mesh (TD_ASSET_LIBRARY=1); same ids/props/ops as procedural
+        obj["director_id"] = oid
+        obj["director_asset"] = asset
+        if op.get("color"):
+            _set_color(obj.material_slots[0].material, op["color"])
+        else:
+            obj["director_color"] = "#FFFFFF"  # untinted = the asset's own look
+        _collection().objects.link(obj)
+        _transform(obj, op)
+        return
     bm = bmesh.new()
     accents = assets.build(asset, bm, seed=_seed(oid))
     mesh = bpy.data.meshes.new(f"{oid}_mesh")
@@ -487,6 +505,8 @@ def read_scene() -> list[dict]:
         }
         if mat is not None:
             row["material"] = mat.name
+        if obj.get("director_library"):
+            row["library"] = str(obj["director_library"])
         if anim:
             row["animated"] = True
             row["animation"] = anim

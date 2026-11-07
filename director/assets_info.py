@@ -17,10 +17,10 @@ ASSET_INFO = {
     "cone": ((1.0, 1.0, 1.0), "1 m cone"),
     "table": ((1.6, 0.9, 0.79), "table, top at z=0.79"),
     "chair": ((0.5, 0.5, 1.02), "chair, seat at z=0.45"),
-    "lamp": ((0.64, 0.64, 1.38), "floor lamp with glowing bulb"),
+    "lamp": ((0.64, 0.64, 1.38), "floor lamp or lantern with a glowing light; color = the light color"),
     "tent": ((2.0, 1.6, 1.1), "triangular camping tent (NOT a building)"),
     "cabin": ((3.0, 2.72, 2.93), "small log cabin with pitched roof, door, windows, chimney; use for cabin/hut/log house"),
-    "campfire": ((1.08, 1.07, 0.86), "campfire: logs, stones, flame"),
+    "campfire": ((1.08, 1.07, 0.86), "campfire: logs, stones, flame; color = the FLAME color (default orange)"),
     "ground": ((20.0, 20.0, 0.0), "flat 20 x 20 m ground plane"),
 }
 

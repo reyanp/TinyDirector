@@ -30,6 +30,16 @@ HackUTD 2026 project.
 - `shared/` — `schema/` (plan + result v1), `fixtures/`, `ENGINE_CONTRACT.md` (Blender-side semantics; `engine_sim.py`
   is the reference implementation). `inbox/`, `outbox/`, `state/` are runtime-only and gitignored.
 
+## Asset library (Phase 2)
+`assets/catalog.json` (sources, CC0 licenses, params) -> `python assets/fetch.py` -> `assets/cache/`;
+`blender -b --factory-startup --python assets/build_library.py` -> `assets/library/*.blend` + `index.json` (both gitignored).
+Worker with `TD_ASSET_LIBRARY=1` / `-- --library` renders `cabin/tree/campfire/rock/lamp` as library meshes
+(`blender_engine/library.py`); plans/contract unchanged; `color` sets the `TD_Tint` node. Docs: `docs/ASSETS.md`,
+`docs/PHASE2.md`. Visual experiments: `experiments/winter_diorama.py` (writes to gitignored `experiments/out/`).
+Blender MCP is NOT used at runtime (arbitrary code exec, telemetry on by default); see docs/PHASE2.md.
+Test harness gotcha: `--factory-startup` scenes contain the default Cube at the origin; start from
+`read_factory_settings(use_empty=True)`. `mesh.materials.clear()` resets every face to slot 0.
+
 ## Ops
 `add`, `modify` (shifts an animated channel instead of wiping it), `delete`, `animate` (2 keys; start = value the
 object actually has at start_frame, so segments chain), `bounce` (cycles x Z hop, ends at start height). Timeline is
@@ -63,6 +73,7 @@ python -m director.cli --inspect                       # live scene JSON
 python -m director.nvidia_smoke / director.vision_smoke   # live API checks
 blender -b --python blender_engine/phase1_check.py     # Phase 1 engine checks in real Blender
 python -m director.dev.phase1_e2e [--mock]             # Phase 1 end-to-end, saves docs/phase1_demo.blend
+python -m director.dev.library_e2e [--mock]            # asset-library end-to-end (needs built library)
 ```
 Flags: `--mock` (offline model), `--reset`, `--mode auto|create|edit`, `--manifest PATH`, `--json`, `-v`,
 `--no-verify`, `--max-corrections N`, `--timeout S`.

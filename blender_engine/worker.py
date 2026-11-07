@@ -7,6 +7,7 @@ Options after `--`:   --keep         keep TinyDirector objects from a previous s
                       --once         process the inbox once and quit (headless tests)
                       --loop         headless (-b) only: block and poll the inbox until killed
                       --save PATH    save a copy of the .blend after every job (e.g. a demo file)
+                      --library      use the asset library (same as TD_ASSET_LIBRARY=1; see assets/catalog.json)
 Inbox files with {"kind": "inspect"} are read-only scene inspections: nothing is applied.
 Env TINYDIRECTOR_ROOT overrides the repo root; TD_SHARED_DIR overrides the inbox/outbox/state folder.
 """
@@ -169,6 +170,10 @@ def setup_scene() -> None:
 
 def start() -> None:
     args = _args()
+    if "--library" in args:
+        os.environ["TD_ASSET_LIBRARY"] = "1"
+    from blender_engine import library
+    print(f"[TinyDirector] asset library: {'ON' if library.enabled() else 'off (procedural assets)'}")
     INBOX.mkdir(parents=True, exist_ok=True)
     OUTBOX.mkdir(parents=True, exist_ok=True)
     if "--keep" not in args:

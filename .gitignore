@@ -19,3 +19,8 @@ shared/state/*
 
 # blender
 *.blend1
+
+# asset library (reproducible: python assets/fetch.py && blender -b --python assets/build_library.py)
+assets/cache/
+assets/library/
+experiments/out/

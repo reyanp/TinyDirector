@@ -69,7 +69,8 @@ Rules:
    cube; if several match, pick the one whose color/position the user described.
 4. A request with several parts ("add X, put Y next to it, make X bounce") becomes several operations in that order.
    mode is "edit" if any operation changes an existing object, else "create".
-5. Colors are "#RRGGBB". Units are meters, Z is up, ground at z=0, keep positions within [-10, 10]. "position" is where
+5. Colors are "#RRGGBB". Only set "color" when the user names a color; otherwise omit it (every asset has a good
+   default look, and on some assets color means a specific part - see the size table). Units are meters, Z is up, ground at z=0, keep positions within [-10, 10]. "position" is where
    the object's BASE sits (every asset's origin is at the bottom center), so z=0 means standing on the ground; never
    add half the height. Use z>0 only to put something on top of another object (e.g. a mug on a table: z=0.79). Use the sizes below so new objects never overlap existing ones;
    "next to"/"beside" means a ~0.8 m gap between their edges.

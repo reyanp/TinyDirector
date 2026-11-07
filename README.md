@@ -25,3 +25,8 @@ python -m director.cli --send --text "Add a tree and make the cube bounce three 
 ```
 Press Space in Blender's viewport to play. `docs/phase1_demo.blend` is a saved result of exactly these three
 prompts (regenerate with `python -m director.dev.phase1_e2e`). Phase 1 notes: [docs/PHASE1.md](docs/PHASE1.md).
+
+## Asset library + polished renders (Phase 2)
+![winter diorama](docs/phase2/winter_diorama.png)
+
+CC0 Poly Haven assets and stylized library meshes, used through the same Nemotron plans. See [docs/PHASE2.md](docs/PHASE2.md) and [docs/ASSETS.md](docs/ASSETS.md).
