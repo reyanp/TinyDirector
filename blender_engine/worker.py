@@ -3,9 +3,12 @@
 Start it (Windows):   powershell -ExecutionPolicy Bypass -File blender_engine\\run_blender.ps1
 Or by hand:           blender --python blender_engine/worker.py
 Or inside an open Blender: Scripting tab -> Open this file -> Run Script.
-Options after `--`:   --keep   keep TinyDirector objects from a previous session
-                      --once   process the inbox once and quit (headless tests)
-Env TINYDIRECTOR_ROOT overrides the repo root.
+Options after `--`:   --keep         keep TinyDirector objects from a previous session
+                      --once         process the inbox once and quit (headless tests)
+                      --loop         headless (-b) only: block and poll the inbox until killed
+                      --save PATH    save a copy of the .blend after every job (e.g. a demo file)
+Inbox files with {"kind": "inspect"} are read-only scene inspections: nothing is applied.
+Env TINYDIRECTOR_ROOT overrides the repo root; TD_SHARED_DIR overrides the inbox/outbox/state folder.
 """
 
 from __future__ import annotations
@@ -47,9 +50,10 @@ import bpy  # noqa: E402
 from blender_engine import engine, snapshot  # noqa: E402
 
 SNAPSHOTS = os.environ.get("TD_SNAPSHOT", "1") != "0"
-INBOX = ROOT / "shared" / "inbox"
-OUTBOX = ROOT / "shared" / "outbox"
-STATE = ROOT / "shared" / "state"
+SHARED = Path(os.environ["TD_SHARED_DIR"]).resolve() if os.environ.get("TD_SHARED_DIR") else ROOT / "shared"
+INBOX = SHARED / "inbox"
+OUTBOX = SHARED / "outbox"
+STATE = SHARED / "state"
 POLL_SECONDS = 0.25
 
 
@@ -75,9 +79,14 @@ def _redraw() -> None:
 
 
 def _snapshot() -> dict:
-    return {"schema_version": 1, "request_id": "blender_startup", "status": "ok", "applied": 0, "errors": [],
-            "scene_version": engine.scene_version(), "scene_objects": engine.read_scene(),
-            "executor": f"blender {bpy.app.version_string}"}
+    return engine.inspect("blender_startup")
+
+
+def _save_path() -> str | None:
+    args = _args()
+    if "--save" in args and args.index("--save") + 1 < len(args):
+        return str(Path(args[args.index("--save") + 1]).resolve())
+    return None
 
 
 def process_inbox() -> int:
@@ -88,6 +97,11 @@ def process_inbox() -> int:
         rid = job.stem
         try:
             plan = json.loads(job.read_text(encoding="utf-8"))
+            if isinstance(plan, dict) and plan.get("kind") == "inspect":
+                _write_json(OUTBOX / f"{rid}.json", engine.inspect(rid))
+                job.unlink(missing_ok=True)
+                handled += 1
+                continue
             result = engine.make_result(rid, plan)
         except json.JSONDecodeError:
             continue  # partially written by a non-atomic writer; try next tick
@@ -107,11 +121,18 @@ def process_inbox() -> int:
                 print(f"[TinyDirector] snapshot failed: {exc}")
         _write_json(OUTBOX / f"{rid}.json", result)
         _write_json(STATE / "blender_manifest.json", result)
+        save = _save_path()
+        if save and result.get("applied"):
+            try:
+                bpy.ops.wm.save_as_mainfile(filepath=save, copy=True, compress=True)
+            except Exception as exc:
+                print(f"[TinyDirector] save failed: {exc}")
         try:
             job.unlink()
         except FileNotFoundError:
             pass
         print(f"[TinyDirector] {rid}: {result['status']} applied={result['applied']} "
+              f"frames={result.get('scene', {}).get('frame_start')}-{result.get('scene', {}).get('frame_end')} "
               f"scene_version={result['scene_version']} objects={[o['id'] for o in result['scene_objects']]}"
               + (f" errors={result['errors']}" if result["errors"] else ""))
         handled += 1
@@ -157,6 +178,15 @@ def start() -> None:
     if "--once" in args:
         process_inbox()
         return
+    if "--loop" in args:  # background mode has no event loop for timers, so poll in place
+        print(f"[TinyDirector] Blender {bpy.app.version_string} headless worker looping. Watching {INBOX}", flush=True)
+        while True:
+            try:
+                process_inbox()
+            except Exception:
+                traceback.print_exc()
+            sys.stdout.flush()
+            time.sleep(POLL_SECONDS)
     if bpy.app.timers.is_registered(_tick):
         bpy.app.timers.unregister(_tick)
     bpy.app.timers.register(_tick, first_interval=0.5, persistent=True)

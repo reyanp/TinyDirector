@@ -41,21 +41,29 @@ check(r1["status"] == "ok" and r1["applied"] == len(create["operations"]), f"cre
 check(r1["scene_version"] == 1, "scene_version 1")
 before = {o["id"]: o for o in r1["scene_objects"]}
 
-edit = {"schema_version": 1, "request_id": "hc_edit", "mode": "edit", "summary": "edit", "operations": [
-    {"op": "modify", "id": "mug_1", "set": {"color": "#3B6FD9", "scale": 1.5}},
-    {"op": "animate", "id": "cube_1", "property": "rotation", "start_frame": 1, "end_frame": 48, "to": [0, 0, 360]},
-    {"op": "delete", "id": "rock_1"},
+bad = {"schema_version": 1, "request_id": "hc_bad", "mode": "edit", "summary": "bad", "operations": [
+    {"op": "modify", "id": "mug_1", "set": {"color": "#000000"}},
     {"op": "modify", "id": "mug_7", "set": {"scale": 2}},
     {"op": "explode", "id": "tree_1"},
     {"op": "add", "id": "dragon_1", "asset": "dragon", "position": [0, 0, 0]},
 ]}
+rb = engine.make_result("hc_bad", bad)
+check(rb["status"] == "error" and rb["applied"] == 0 and len(rb["errors"]) == 4
+      and [r["ok"] for r in rb["op_results"]] == [False] * 4, f"bad plan rejected whole: {rb['errors']}")
+check({o["id"]: o for o in rb["scene_objects"]} == before and rb["scene_version"] == 1, "rejected plan left scene unchanged")
+
+edit = {"schema_version": 1, "request_id": "hc_edit", "mode": "edit", "summary": "edit", "operations": [
+    {"op": "modify", "id": "mug_1", "set": {"color": "#3B6FD9", "scale": 1.5}},
+    {"op": "animate", "id": "cube_1", "property": "rotation", "start_frame": 1, "end_frame": 48, "to": [0, 0, 360]},
+    {"op": "delete", "id": "rock_1"},
+]}
 r2 = engine.make_result("hc_edit", edit)
 after = {o["id"]: o for o in r2["scene_objects"]}
-check(r2["status"] == "partial" and r2["applied"] == 3 and len(r2["errors"]) == 3, f"partial apply: {r2['errors']}")
+check(r2["status"] == "ok" and r2["applied"] == 3 and all(r["ok"] for r in r2["op_results"]), f"edit applied: {r2['errors']}")
 check(after["mug_1"]["color"] == "#3B6FD9" and after["mug_1"]["scale"] == 1.5, "mug recolored + scaled (read back)")
 check(after["tree_1"] == before["tree_1"], "tree untouched")
 check("rock_1" not in after and bpy.data.objects.get("rock_1") is None, "rock deleted")
-check(after["cube_1"].get("animated") is True and bpy.context.scene.frame_end >= 48, "cube animated")
+check(after["cube_1"].get("animated") is True and bpy.context.scene.frame_end == 48, "cube animated, timeline fit to 1-48")
 bpy.context.scene.frame_set(48)
 check(abs(math.degrees(bpy.data.objects["cube_1"].rotation_euler.z) - 360) < 1e-3, "keyframe reaches 360 deg at f48")
 bpy.context.scene.frame_set(1)

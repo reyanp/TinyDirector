@@ -16,21 +16,32 @@ HackUTD 2026 project.
 - `director/` — runs in a normal venv (`openai`, `jsonschema`, `pytest`).
   - `cli.py` entry point (`python -m director.cli`); `planner.py` text+manifest → Nemotron → plan (1 retry);
     `schema.py` JSON Schema + scene-aware rules (ids exist, no dupes, id prefix = asset, frame ranges);
-    `nemotron_client.py` OpenAI-compatible NIM client; `verifier.py` Nemotron VL checks the Blender render and may
+    `nemotron_client.py` OpenAI-compatible NIM client; `postcheck.py` checks each op against Blender's read-back
+    (never trust the model's word); `assets_info.py` measured asset sizes for the prompt; `verifier.py` Nemotron VL checks the Blender render and may
     propose one fix instruction (which goes back through planner + validator); `bridge.py` inbox/outbox file bridge;
     `engine_sim.py` pure-Python reference executor (SIMULATED); `mock_model.py` offline models (MOCK);
     `trace.py` per-request trace saved to `shared/state/traces/`; `paths.py` repo paths + dependency-free `.env` loader.
   - `dev/fake_worker.py` — SIMULATED stand-in for the Blender worker on the bridge.
-- `blender_engine/` — pure `bpy`/`bmesh`, stdlib only. `worker.py` timer loop (polls `shared/inbox` every 0.25 s),
-  `engine.py` applies ops + reads state back, `assets.py` 13 procedural assets, `snapshot.py` 640px JPEG for the
+  - `dev/phase1_e2e.py` — acceptance run: 3 prompts in one headless Blender scene via a private bridge folder.
+- `blender_engine/` — pure `bpy`/`bmesh`, stdlib only. `worker.py` timer loop (polls `shared/inbox` every 0.25 s;
+  `-- --loop` for headless, `--save PATH`), `engine.py` applies ops all-or-nothing + reads state back (incl.
+  keyframes), `assets.py` 14 procedural assets (cabin included), `phase1_check.py` / `inspect_blend.py` real-Blender checks, `snapshot.py` 640px JPEG for the
   visual check (`TD_SNAPSHOT=0` disables), `headless_check.py` self-test, `run_blender.ps1` Windows-only launcher.
 - `shared/` — `schema/` (plan + result v1), `fixtures/`, `ENGINE_CONTRACT.md` (Blender-side semantics; `engine_sim.py`
   is the reference implementation). `inbox/`, `outbox/`, `state/` are runtime-only and gitignored.
 
+## Ops
+`add`, `modify` (shifts an animated channel instead of wiping it), `delete`, `animate` (2 keys; start = value the
+object actually has at start_frame, so segments chain), `bounce` (cycles x Z hop, ends at start height). Timeline is
+fitted to director keyframes. Positions are the object's BASE (z=0 = on the ground).
+Blender 5.x has no `Action.fcurves`: use `engine.fcurves(obj)` (channelbag via `bpy_extras.anim_utils`).
+
 ## Bridge protocol
 Director atomically writes `shared/inbox/<request_id>.json` (.tmp + `os.replace`); worker ignores `*.tmp`, applies,
-writes `shared/outbox/<request_id>.json` (+ `<request_id>.jpg` snapshot), deletes the inbox file. Last real result is
-`shared/state/latest_manifest.json` (simulator uses `simulated_manifest.json`); edits default to it unless `--manifest`.
+writes `shared/outbox/<request_id>.json` (+ `<request_id>.jpg` snapshot), deletes the inbox file. `{"kind":"inspect"}`
+requests return the live scene without applying anything; `--send` inspects before every plan (Blender is the
+source of truth). `TD_SHARED_DIR` relocates inbox/outbox/state for both sides. If the user has Blender open on
+`shared/`, never send test jobs there: use `phase1_e2e` (private folder) or set `TD_SHARED_DIR`.
 Objects are tracked by the `director_id` custom property. `scene_objects` must be read back from Blender, never echoed.
 
 ## Commands (Linux, from repo root)
@@ -48,13 +59,16 @@ python -m director.cli --text "..." --dry-run          # plan + validate only (d
 python -m director.cli --text "..." --simulate         # pure-Python executor
 python -m director.cli --text "..." --send --trace     # real Blender via bridge (+ vision verify)
 python -m director.cli --send --trace                  # interactive multi-turn
+python -m director.cli --inspect                       # live scene JSON
 python -m director.nvidia_smoke / director.vision_smoke   # live API checks
+blender -b --python blender_engine/phase1_check.py     # Phase 1 engine checks in real Blender
+python -m director.dev.phase1_e2e [--mock]             # Phase 1 end-to-end, saves docs/phase1_demo.blend
 ```
 Flags: `--mock` (offline model), `--reset`, `--mode auto|create|edit`, `--manifest PATH`, `--json`, `-v`,
 `--no-verify`, `--max-corrections N`, `--timeout S`.
-Exit codes: 0 ok/clarify · 1 model call failed · 2 config · 3 plan invalid after retry · 4 bridge timeout · 5 execution error.
+Exit codes: 0 ok/clarify · 1 model call failed · 2 config · 3 plan invalid after retry · 4 bridge timeout · 5 execution error / post-check failed.
 
 ## Config (env or `.env`; real env vars win)
 `NVIDIA_API_KEY`, `NEMOTRON_MODEL` (default `nvidia/nemotron-3.5-super-vl-120b-a12b`), `NEMOTRON_BASE_URL`
 (default `https://integrate.api.nvidia.com/v1`), `NEMOTRON_THINKING` (0), `NEMOTRON_TIMEOUT` (90), `NEMOTRON_VL_MODEL`,
-`TINYDIRECTOR_ROOT` (worker repo-root override), `TD_SNAPSHOT`.
+`TINYDIRECTOR_ROOT` (worker repo-root override), `TD_SNAPSHOT`, `TD_SHARED_DIR`.

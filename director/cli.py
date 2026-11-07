@@ -6,6 +6,7 @@
   python -m director.cli --text "..." --simulate      # execute in the pure-Python simulator
   python -m director.cli --text "..." --send          # execute in Blender via shared/inbox -> outbox
   python -m director.cli --send                       # no --text: interactive multi-turn session
+  python -m director.cli --inspect                    # print the live Blender scene (read-only)
   add --mock to use the offline rule-based model instead of Nemotron (clearly labeled MOCK)
 
 Exit codes: 0 ok/clarify, 1 model call failed, 2 config error, 3 invalid plan,
@@ -21,7 +22,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import bridge, paths
+from . import bridge, paths, postcheck
 from .engine_sim import make_result
 from .nemotron_client import ConfigError, ModelCallError, NemotronClient
 from .planner import PlanError, plan as make_plan
@@ -64,7 +65,8 @@ def execute(plan: dict, args, manifest: dict | None, trace) -> tuple[int, dict |
         executor = "SIMULATED worker" if out.get("executor") == "simulated" else out.get("executor", "Blender")
     else:
         prev = manifest or {"scene_version": 0, "scene_objects": []}
-        out = make_result(plan["request_id"], prev.get("scene_version", 0), prev.get("scene_objects", []), plan)
+        out = make_result(plan["request_id"], prev.get("scene_version", 0), prev.get("scene_objects", []), plan,
+                          prev.get("scene"))
         bridge.atomic_write_json(SIM_MANIFEST, out)
         executor = "SIMULATED engine (not Blender)"
     trace.add("execute", f"{executor} applied {out.get('applied', '?')} operation(s), status={out['status']}",
@@ -72,10 +74,29 @@ def execute(plan: dict, args, manifest: dict | None, trace) -> tuple[int, dict |
     trace.add("observe", observe(manifest, out) + (f"; snapshot {out['snapshot']}" if out.get("snapshot") else ""),
               scene_objects=[o["id"] for o in out["scene_objects"]])
     print(f"\n{executor}: status={out['status']} applied={out.get('applied')}  " + observe(manifest, out))
+    for row in out.get("op_results", []):
+        op = plan["operations"][row["index"]] if row["index"] < len(plan["operations"]) else {}
+        print(f"  {'done' if row['ok'] else 'FAIL'} op {row['index']} {row['op']} {row.get('id', '')}"
+              + (f" - {row['error']}" if row.get("error") else ""))
     for e in out.get("errors", []):
         print(f"  ! {e}", file=sys.stderr)
     if out["status"] != "ok":
+        return 5, out
+    # never trust the plan or the model: check each op against the state Blender read back
+    checks = postcheck.run(plan, manifest, out)
+    failed = [c for c in checks if not c.ok]
+    trace.add("check", f"{postcheck.summary(checks)} against {executor}'s read-back",
+              failed=[c.line().strip() for c in failed])
+    print(f"Post-check ({executor} read-back): {postcheck.summary(checks)}")
+    for c in checks:
+        if not c.ok or args.trace:
+            print(c.line())
+    if failed:
+        print("POST-CHECK FAILED: the scene does not match the plan (see above).", file=sys.stderr)
         code = 5
+    if out.get("scene"):
+        sc = out["scene"]
+        print(f"Timeline: frames {sc.get('frame_start')}-{sc.get('frame_end')} at {sc.get('fps')} fps")
     return code, out
 
 
@@ -187,10 +208,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-verify", dest="verify", action="store_false",
                     help="skip the Nemotron visual self-check after Blender executes (on by default with --send)")
     ap.add_argument("--max-corrections", type=int, default=1, help="visual self-corrections per request (default 1)")
+    ap.add_argument("--inspect", action="store_true", help="print the live Blender scene via the bridge and exit")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.WARNING,
                         format="%(levelname)s %(name)s: %(message)s")
+
+    if args.inspect:
+        try:
+            live = bridge.inspect(timeout=args.timeout)
+        except bridge.BridgeTimeout as exc:
+            print(f"BRIDGE TIMEOUT: {exc}", file=sys.stderr)
+            return 4
+        print(json.dumps(live, indent=2))
+        return 0
 
     global _VERIFIER
     if args.mock:
@@ -217,21 +248,36 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"CONFIG ERROR: manifest not found: {args.manifest}", file=sys.stderr)
                 return 2
         elif args.send:
-            # Prefer whichever is newer: our last saved result, or the snapshot Blender writes at
-            # startup and after every job (so a freshly restarted Blender is never out of sync).
-            candidates = [p for p in (paths.LATEST_MANIFEST, paths.STATE / "blender_manifest.json") if p.exists()]
-            newest = max(candidates, key=lambda p: p.stat().st_mtime) if candidates else None
-            manifest = bridge.load_manifest(newest) if newest else None
+            manifest = None  # read live from Blender right before each plan (see live_scene)
         else:
             manifest = bridge.load_manifest(state_file)
     except json.JSONDecodeError as exc:
         print(f"CONFIG ERROR: manifest is not valid JSON: {exc}", file=sys.stderr)
         return 2
-    if manifest and not args.json:
-        ids = ", ".join(o["id"] for o in manifest.get("scene_objects", [])) or "(empty)"
-        print(f"scene v{manifest.get('scene_version')}: {ids}", file=sys.stderr)
+    def live_scene(current):
+        """--send: Blender's actual scene is the source of truth, inspected before every plan."""
+        if not args.send or args.manifest:
+            return current, 0
+        try:
+            live = bridge.inspect(timeout=args.timeout)
+        except bridge.BridgeTimeout as exc:
+            print(f"BRIDGE TIMEOUT (scene inspection): {exc}", file=sys.stderr)
+            return None, 4
+        except bridge.BridgeResultError as exc:
+            print(f"BRIDGE ERROR (scene inspection): {exc}", file=sys.stderr)
+            return None, 5
+        return live, 0
+
+    def show(m, source):
+        if m and not args.json:
+            ids = ", ".join(o["id"] + ("*" if o.get("animated") else "") for o in m.get("scene_objects", []))
+            print(f"scene v{m.get('scene_version')} ({source}): {ids or '(empty)'}", file=sys.stderr)
 
     if args.text:
+        manifest, code = live_scene(manifest)
+        if code:
+            return code
+        show(manifest, "live Blender inspection" if args.send and not args.manifest else "manifest file")
         code, _ = run_one(args.text, args, client, manifest)
         return code
 
@@ -249,6 +295,10 @@ def main(argv: list[str] | None = None) -> int:
             break
         if not line:
             continue
+        manifest, code = live_scene(manifest)
+        if code:
+            continue
+        show(manifest, "live Blender inspection" if args.send and not args.manifest else "previous turn")
         code, manifest = run_one(line, args, client, manifest)
     return code
 

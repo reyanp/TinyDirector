@@ -14,3 +14,14 @@ powershell -ExecutionPolicy Bypass -File blender_engine\run_blender.ps1     # te
 python -m director.cli --send --text "Create a red mug next to a tree" --trace   # terminal 2
 python -m director.cli --send --text "Change only the mug to blue" --trace
 ```
+
+## Demo in two terminals (Linux)
+```bash
+blender --python blender_engine/worker.py                                      # terminal 1
+source .venv/bin/activate                                                      # terminal 2
+python -m director.cli --send --text "Create a red cube beside a cabin." --trace
+python -m director.cli --send --text "Change the red cube to blue." --trace
+python -m director.cli --send --text "Add a tree and make the cube bounce three times." --trace
+```
+Press Space in Blender's viewport to play. `docs/phase1_demo.blend` is a saved result of exactly these three
+prompts (regenerate with `python -m director.dev.phase1_e2e`). Phase 1 notes: [docs/PHASE1.md](docs/PHASE1.md).

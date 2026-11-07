@@ -17,7 +17,7 @@ from mathutils import Matrix, Vector
 DEFAULT_COLORS = {
     "mug": "#D95C52", "tree": "#457A5B", "rock": "#8A8580", "cube": "#5B8DEF", "sphere": "#EF8B5B",
     "cylinder": "#9B6BD6", "cone": "#E8C547", "table": "#A0703C", "chair": "#B5824A", "lamp": "#F2E3B3",
-    "tent": "#E07A3F", "campfire": "#FF7A1A", "ground": "#6E8F5A",
+    "tent": "#E07A3F", "cabin": "#9C6B3C", "campfire": "#FF7A1A", "ground": "#6E8F5A",
 }
 # accent materials: name -> (hex, emission strength)
 ACCENTS = {
@@ -26,6 +26,8 @@ ACCENTS = {
     "metal": ("#3A3A3A", 0.0),
     "stone": ("#77736E", 0.0),
     "bulb": ("#FFF2C8", 4.0),
+    "roof": ("#5E3A2E", 0.0),
+    "glass": ("#BFDDF2", 0.6),
 }
 
 
@@ -151,6 +153,34 @@ def build(asset: str, bm, seed: int = 0) -> list[str]:
         for face in ((0, 1, 2), (5, 4, 3), (0, 2, 5, 3), (1, 4, 5, 2), (0, 3, 4, 1)):
             bm.faces.new([vs[i] for i in face]).material_index = 0
         return []
+    if asset == "cabin":
+        # log cabin, ~2.4 x 2.0 m walls, pitched roof with overhang, ~2.7 m to the ridge. Door faces -Y.
+        W, D, H = 2.4, 2.0, 1.5
+        _box(bm, _T(0, 0, H / 2) @ _S(W, D, H))                                  # walls (main color)
+        for z in (0.3, 0.6, 0.9, 1.2):                                           # log seams front/back
+            for y in (-D / 2, D / 2):
+                _cyl(bm, _T(0, y, z) @ Matrix.Rotation(math.pi / 2, 4, "Y") @ _S(1, 1, W + 0.1),
+                     r1=0.06, r2=0.06, segs=8)
+        for x in (-W / 2, W / 2):                                                # corner posts
+            for y in (-D / 2, D / 2):
+                _box(bm, _T(x, y, H / 2) @ _S(0.16, 0.16, H + 0.05), slot=2)
+        rw, rd, rh, t = W / 2 + 0.3, D / 2 + 0.25, 1.15, 0.12                    # roof: closed prism
+        prism = [(-rw, -rd, H), (rw, -rd, H), (0, -rd, H + rh), (-rw, rd, H), (rw, rd, H), (0, rd, H + rh),
+                 (-rw, -rd, H - t), (rw, -rd, H - t), (-rw, rd, H - t), (rw, rd, H - t)]
+        v = [bm.verts.new(p) for p in prism]
+        for face in ((0, 2, 1), (3, 4, 5), (0, 3, 5, 2), (1, 2, 5, 4),
+                     (6, 7, 9, 8), (0, 6, 8, 3), (1, 4, 9, 7), (0, 1, 7, 6), (3, 8, 9, 4)):
+            bm.faces.new([v[i] for i in face]).material_index = 1
+        _box(bm, _T(0.35, -D / 2 - 0.03, 0.55) @ _S(0.55, 0.08, 1.1), slot=2)  # door
+        for x in (-0.65,):                                                       # front window
+            _box(bm, _T(x, -D / 2 - 0.03, 0.9) @ _S(0.5, 0.06, 0.45), slot=3)
+        for x in (-0.5, 0.5):                                                    # side windows
+            _box(bm, _T(-W / 2 - 0.03, x, 0.9) @ _S(0.06, 0.45, 0.4), slot=3)
+            _box(bm, _T(W / 2 + 0.03, x, 0.9) @ _S(0.06, 0.45, 0.4), slot=3)
+        _box(bm, _T(0.75, 0.45, H + 0.9) @ _S(0.32, 0.32, 1.0), slot=4)          # chimney
+        _box(bm, _T(0.35, -D / 2 - 0.25, 0.05) @ _S(0.9, 0.45, 0.1), slot=2)    # porch step
+        bmesh.ops.recalc_face_normals(bm, faces=list(bm.faces))
+        return ["roof", "wood", "glass", "stone"]
     if asset == "campfire":
         for i in range(8):
             a = 2 * math.pi * i / 8

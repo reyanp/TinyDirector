@@ -21,7 +21,8 @@ Blender reports these objects now exist (ids, assets, hex colors, positions in m
 
 Look at the attached render of the scene. Judge ONLY whether the visible result satisfies the user's request
 (right objects, colors, relative placement like "next to"/"on"/"behind", nothing important hidden or
-overlapping). Ignore lighting quality and the simple low-poly art style.
+overlapping). Ignore lighting quality and the simple low-poly art style. This is a still image of frame 1:
+animations (bounce, spin, move over time) cannot be seen here, so never report them as missing.
 
 Reply with ONE JSON object and nothing else:
 {{"matches": true/false, "confidence": 0.0-1.0, "observations": "one sentence describing what you see",
@@ -48,7 +49,8 @@ def _data_url(image: Path) -> str:
 
 
 def build_messages(request: str, plan: dict, result: dict, image: Path) -> list[dict]:
-    ops = [f"{o['op']} {o['id']}" + (f" {o.get('set')}" if o["op"] == "modify" else "") for o in plan["operations"]]
+    ops = [f"{o['op']} {o['id']}" + (f" {o.get('set')}" if o["op"] == "modify" else "")
+           + (f" x{o.get('cycles')}" if o["op"] == "bounce" else "") for o in plan["operations"]]
     objects = [{k: o.get(k) for k in ("id", "asset", "color", "position", "scale")}
                for o in result.get("scene_objects", [])]
     text = VERIFY_PROMPT.format(request=request.replace('"', "'"), ops=json.dumps(ops), objects=json.dumps(objects))

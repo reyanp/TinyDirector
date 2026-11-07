@@ -6,8 +6,10 @@ import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SHARED = REPO_ROOT / "shared"
-SCHEMA_DIR = SHARED / "schema"
+SCHEMA_DIR = REPO_ROOT / "shared" / "schema"  # the contract always comes from the repo
+# Runtime bridge folders. TD_SHARED_DIR points the director AND the worker at a private
+# inbox/outbox/state (used by director.dev.phase1_e2e so it never talks to an open Blender).
+SHARED = Path(os.environ["TD_SHARED_DIR"]).resolve() if os.environ.get("TD_SHARED_DIR") else REPO_ROOT / "shared"
 PLAN_SCHEMA_PATH = SCHEMA_DIR / "scene_plan_v1.json"
 RESULT_SCHEMA_PATH = SCHEMA_DIR / "scene_result_v1.json"
 INBOX = SHARED / "inbox"

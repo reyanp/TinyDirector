@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tinydirector.local/schema/scene_result_v1.json",
   "title": "TinyDirector execution result / scene manifest v1",
-  "description": "Written by the Blender engine to shared/outbox/<request_id>.json. scene_objects is the REAL post-execution scene and doubles as the manifest for the next edit.",
+  "description": "Written by the Blender engine to shared/outbox/<request_id>.json. scene_objects is the REAL post-execution scene and doubles as the manifest for the next edit. Fields marked optional are extra read-back for scene awareness; consumers must tolerate their absence.",
   "type": "object",
   "required": ["schema_version", "request_id", "status", "errors", "scene_version", "scene_objects"],
   "properties": {
@@ -12,7 +12,39 @@
     "applied": { "type": "integer", "minimum": 0 },
     "errors": { "type": "array", "items": { "type": "string" } },
     "scene_version": { "type": "integer", "minimum": 0 },
-    "scene_objects": { "type": "array", "items": { "$ref": "#/$defs/scene_object" } }
+    "scene_objects": { "type": "array", "items": { "$ref": "#/$defs/scene_object" } },
+    "kind": { "enum": ["plan", "inspect"], "description": "optional; inspect = read-only scene inspection, nothing applied" },
+    "executor": { "type": "string", "description": "optional; e.g. 'blender 5.2.3' or 'simulated'" },
+    "scene": {
+      "description": "optional; timeline settings",
+      "type": "object",
+      "properties": {
+        "frame_start": { "type": "integer" },
+        "frame_end": { "type": "integer" },
+        "frame_current": { "type": "integer" },
+        "fps": { "type": "number" }
+      }
+    },
+    "op_results": {
+      "description": "optional; one entry per plan operation, in order",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "op", "ok"],
+        "properties": {
+          "index": { "type": "integer" },
+          "op": { "type": "string" },
+          "id": { "type": "string" },
+          "ok": { "type": "boolean" },
+          "error": { "type": "string" }
+        }
+      }
+    },
+    "other_objects": {
+      "description": "optional; objects NOT created by the director (read-only context)",
+      "type": "array",
+      "items": { "type": "object", "required": ["name", "type"] }
+    }
   },
   "$defs": {
     "scene_object": {
@@ -24,7 +56,25 @@
         "color": { "type": "string" },
         "position": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
         "rotation": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
-        "scale": { "type": "number" }
+        "scale": { "type": "number" },
+        "name": { "type": "string", "description": "optional; Blender object name" },
+        "type": { "type": "string", "description": "optional; Blender object type, e.g. MESH" },
+        "parent": { "type": ["string", "null"], "description": "optional; parent director id or Blender name" },
+        "material": { "type": "string", "description": "optional; main material name" },
+        "animated": { "type": "boolean" },
+        "animation": {
+          "description": "optional; one entry per animated channel, keys are [frame, value] (rotation in degrees)",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["property", "axis", "keys"],
+            "properties": {
+              "property": { "enum": ["position", "rotation", "scale"] },
+              "axis": { "enum": ["x", "y", "z"] },
+              "keys": { "type": "array", "items": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "number" } } }
+            }
+          }
+        }
       }
     }
   }

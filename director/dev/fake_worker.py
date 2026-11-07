@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .. import paths
 from ..bridge import atomic_write_json
-from ..engine_sim import make_result
+from ..engine_sim import inspect, make_result
 from ..schema import validate_plan
 
 SIM_STATE = paths.STATE / "fake_worker_scene.json"
@@ -30,6 +30,11 @@ def process_once(inbox: Path = paths.INBOX, outbox: Path = paths.OUTBOX, state_p
         rid = job.stem
         try:
             plan = json.loads(job.read_text(encoding="utf-8"))
+            if isinstance(plan, dict) and plan.get("kind") == "inspect":
+                atomic_write_json(outbox / f"{rid}.json", inspect(rid, state))
+                job.unlink()
+                handled += 1
+                continue
         except json.JSONDecodeError as exc:
             result = {"schema_version": 1, "request_id": rid, "status": "error", "applied": 0,
                       "errors": [f"bad JSON: {exc}"], "scene_version": state["scene_version"],
@@ -42,8 +47,9 @@ def process_once(inbox: Path = paths.INBOX, outbox: Path = paths.OUTBOX, state_p
                           "scene_version": state["scene_version"], "scene_objects": state["scene_objects"],
                           "executor": "simulated"}
             else:
-                result = make_result(rid, state["scene_version"], state["scene_objects"], plan)
-        atomic_write_json(state_path, {"scene_version": result["scene_version"], "scene_objects": result["scene_objects"]})
+                result = make_result(rid, state["scene_version"], state["scene_objects"], plan, state.get("scene"))
+        atomic_write_json(state_path, {"scene_version": result["scene_version"], "scene_objects": result["scene_objects"],
+                                       **({"scene": result["scene"]} if "scene" in result else {})})
         atomic_write_json(outbox / f"{rid}.json", result)
         job.unlink()
         print(f"[fake_worker] {rid}: {result['status']} applied={result['applied']} "

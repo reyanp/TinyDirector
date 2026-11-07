@@ -36,6 +36,11 @@ def allowed_assets() -> list[str]:
     return list(plan_schema()["$defs"]["asset"]["enum"])
 
 
+OP_KINDS = ["add", "modify", "delete", "animate", "bounce"]  # same order as the schema's oneOf
+BOUNCE_DEFAULTS = {"height": 1.0, "start_frame": 1, "frames_per_cycle": 24}
+MAX_FRAME = 1000
+
+
 def _fmt_path(path: Iterable[Any]) -> str:
     out = "plan"
     for p in path:
@@ -50,10 +55,10 @@ def _schema_errors(obj: Any, schema: dict) -> list[str]:
         # oneOf failures are vague; surface the best sub-error for the op's declared type.
         if err.validator == "oneOf" and isinstance(err.instance, dict) and "op" in err.instance:
             op = err.instance.get("op")
-            if op not in ("add", "modify", "delete", "animate"):
-                errors.append(f"{_fmt_path(err.absolute_path)}: unknown op {op!r}; allowed: add, modify, delete, animate")
+            if op not in OP_KINDS:
+                errors.append(f"{_fmt_path(err.absolute_path)}: unknown op {op!r}; allowed: {', '.join(OP_KINDS)}")
                 continue
-            idx = ["add", "modify", "delete", "animate"].index(op)
+            idx = OP_KINDS.index(op)
             sub = [c for c in (err.context or []) if list(c.schema_path)[:1] == [idx]]
             if sub:
                 for c in sub:
@@ -113,6 +118,12 @@ def validate_plan(obj: Any, manifest: dict | None = None, expected_mode: str | N
                 errors.append(f"{where}: end_frame ({op['end_frame']}) must be greater than start_frame ({op['start_frame']})")
             if kind == "animate" and op["property"] == "scale" and min(op["to"]) <= 0:
                 errors.append(f"{where}.to: scale values must be > 0")
+            if kind == "bounce":
+                b = {**BOUNCE_DEFAULTS, **op}
+                end = b["start_frame"] + b["cycles"] * b["frames_per_cycle"]
+                if end > MAX_FRAME:
+                    errors.append(f"{where}: bounce ends at frame {end}; must be <= {MAX_FRAME} "
+                                  "(fewer cycles or frames_per_cycle)")
     return errors
 
 
@@ -137,4 +148,9 @@ def pretty(plan: dict) -> str:
             lines.append(f"  - delete {op['id']}")
         elif k == "animate":
             lines.append(f"  > animate {op['id']:<11} {op['property']} -> {op['to']} frames {op['start_frame']}-{op['end_frame']}")
+        elif k == "bounce":
+            b = {**BOUNCE_DEFAULTS, **op}
+            end = b["start_frame"] + b["cycles"] * b["frames_per_cycle"]
+            lines.append(f"  ^ bounce  {op['id']:<11} x{b['cycles']} height={b['height']} m "
+                         f"frames {b['start_frame']}-{end}")
     return "\n".join(lines)

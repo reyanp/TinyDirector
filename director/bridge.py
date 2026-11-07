@@ -6,12 +6,17 @@ Protocol:
   Blender must ignore *.tmp files in the inbox.
 The result's scene_objects is the REAL scene, saved to shared/state/latest_manifest.json
 and used for the next edit. Nothing here talks to GitHub or the network.
+
+Inspection: inspect() drops {"kind": "inspect", "request_id": ...} in the inbox; the worker answers
+with the live scene (scene_result_v1, kind="inspect") without applying anything. The director
+inspects before every plan, so Blender - not a cached file - is the source of truth.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import secrets
 import time
 from pathlib import Path
 
@@ -97,4 +102,19 @@ def send(plan: dict, timeout: float = 15.0) -> dict:
     submit(plan)
     result = wait_for_result(plan["request_id"], timeout=timeout)
     save_manifest(result)
+    return result
+
+
+def inspect(timeout: float = 15.0, inbox: Path | None = None, outbox: Path | None = None) -> dict:
+    """Ask the running worker for the live scene. Raises BridgeTimeout if nobody answers."""
+    inbox = inbox or paths.INBOX
+    outbox = outbox or paths.OUTBOX
+    rid = "inspect_" + time.strftime("%Y%m%d_%H%M%S") + "_" + secrets.token_hex(3)
+    atomic_write_json(inbox / f"{rid}.json", {"kind": "inspect", "request_id": rid})
+    try:
+        result = wait_for_result(rid, timeout=timeout, outbox=outbox, inbox=inbox)
+    except BridgeTimeout:
+        (inbox / f"{rid}.json").unlink(missing_ok=True)  # don't leave a stale request behind
+        raise
+    (outbox / f"{rid}.json").unlink(missing_ok=True)
     return result

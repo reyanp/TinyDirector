@@ -14,6 +14,7 @@ import secrets
 import time
 from dataclasses import dataclass, field
 
+from .assets_info import prompt_table
 from .nemotron_client import ModelClient, ModelReply
 from .schema import allowed_assets, manifest_objects, plan_schema, validate_plan
 from .trace import Trace
@@ -46,11 +47,17 @@ SYSTEM_PROMPT = """You are the planning brain of TinyDirector, an agent that edi
 You never write code. You output exactly ONE JSON object that matches the JSON Schema below, and nothing else
 (no prose, no markdown fences).
 
-Operations:
+Operations (executed in the order you list them; an op may use an object added earlier in the same plan):
 - add: create a new object. id MUST be "<asset>_<n>" using the NEXT FREE ids listed below. Never reuse an existing id.
 - modify: change color/position/rotation/scale of an EXISTING object. Put only the changed fields in "set".
+  Moving an animated object shifts its whole animation; its keyframes are kept.
 - delete: remove an EXISTING object. Only when the user explicitly asks to remove something.
-- animate: keyframe position/rotation/scale of an existing or just-added object from start_frame to end_frame (end > start).
+- animate: keyframe position/rotation/scale from start_frame to end_frame (end > start). "to" is the ABSOLUTE value
+  at end_frame; the start value is whatever the object has at start_frame. To go somewhere and come back, chain two
+  animates (1-24 to B, then 24-48 back to A). A full spin: rotation to [0,0,360].
+- bounce: the object hops up and down "cycles" times and ends where it started (height in meters, default 1;
+  frames_per_cycle default 24 = 1 second). ALWAYS use bounce for bounce/hop/jump-repeatedly requests; never fake it
+  with animate. "bounce three times" = cycles 3.
 
 Rules:
 1. Supported assets ONLY: {assets}. Never invent assets or operations.
@@ -58,10 +65,18 @@ Rules:
    include the empty list) and a short
    "message" that says what is unsupported and offers the closest supported option. Do not silently substitute.
 3. Edits: reference ids that exist in the scene manifest exactly. Touch ONLY what the user asked about; every other
-   object must be left alone (do not delete and re-create; use modify). "the mug" means the existing mug.
-4. Colors are "#RRGGBB". Units are meters, Z is up, ground at z=0, keep positions within [-10, 10].
-   Place new objects so they do not overlap existing ones; "next to" means about 1.5 m apart.
-5. Set "request_id" to "pending" (the system fills it in). "summary" is one short sentence.
+   object must be left alone (do not delete and re-create; use modify). "the cube" / "that cube" means the existing
+   cube; if several match, pick the one whose color/position the user described.
+4. A request with several parts ("add X, put Y next to it, make X bounce") becomes several operations in that order.
+   mode is "edit" if any operation changes an existing object, else "create".
+5. Colors are "#RRGGBB". Units are meters, Z is up, ground at z=0, keep positions within [-10, 10]. "position" is where
+   the object's BASE sits (every asset's origin is at the bottom center), so z=0 means standing on the ground; never
+   add half the height. Use z>0 only to put something on top of another object (e.g. a mug on a table: z=0.79). Use the sizes below so new objects never overlap existing ones;
+   "next to"/"beside" means a ~0.8 m gap between their edges.
+6. Set "request_id" to "pending" (the system fills it in). "summary" is one short sentence.
+
+Asset sizes (width x depth x height, origin at the base center):
+{sizes}
 
 JSON Schema:
 {schema}
@@ -79,12 +94,27 @@ def _next_free_ids(objects: list[dict], assets: list[str]) -> dict[str, str]:
     return out
 
 
+def _compact(o: dict) -> dict:
+    """The planner-relevant part of one read-back object; animation as frame ranges, not raw keys."""
+    out = {k: o[k] for k in ("id", "asset", "color", "position", "rotation", "scale") if k in o}
+    if o.get("parent"):
+        out["parent"] = o["parent"]
+    anim = {}
+    for ch in o.get("animation") or []:
+        keys = ch.get("keys") or []
+        if keys:
+            anim[f"{ch['property']}.{ch['axis']}"] = f"frames {keys[0][0]:g}-{keys[-1][0]:g}, {len(keys)} keys"
+    if anim:
+        out["animation"] = anim
+    return out
+
+
 def build_messages(text: str, manifest: dict | None, mode: str) -> list[dict]:
     assets = allowed_assets()
     objects = manifest_objects(manifest)
-    compact_objects = [{k: o[k] for k in ("id", "asset", "color", "position", "rotation", "scale") if k in o}
-                       for o in objects]
-    system = SYSTEM_PROMPT.format(assets=", ".join(assets), schema=json.dumps(plan_schema(), separators=(",", ":")))
+    compact_objects = [_compact(o) for o in objects]
+    system = SYSTEM_PROMPT.format(assets=", ".join(assets), sizes=prompt_table(),
+                                  schema=json.dumps(plan_schema(), separators=(",", ":")))
     mode_line = {"create": "create (add new objects; existing objects stay as they are)",
                  "edit": "edit (change the existing scene; reference manifest ids)",
                  "auto": "decide: create if adding new things, edit if changing existing things"}[mode]
@@ -92,6 +122,10 @@ def build_messages(text: str, manifest: dict | None, mode: str) -> list[dict]:
         f"<requested_mode>{mode if mode != 'auto' else 'auto'}</requested_mode>\n"
         f"Mode guidance: {mode_line}\n"
         f"<scene_manifest>\n{json.dumps(compact_objects)}\n</scene_manifest>\n"
+        + (f"Timeline: {json.dumps(manifest['scene'])}\n" if (manifest or {}).get("scene") else "")
+        + (f"Other objects in Blender (read-only, not editable): "
+           f"{json.dumps([o.get('name') for o in manifest['other_objects']][:20])}\n"
+           if (manifest or {}).get("other_objects") else "") +
         f"Next free ids per asset: {json.dumps(_next_free_ids(objects, assets))}\n"
         f"<user_request>{text}</user_request>\n"
         "Return the JSON plan now."
