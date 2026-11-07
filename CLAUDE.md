@@ -40,6 +40,17 @@ Blender MCP is NOT used at runtime (arbitrary code exec, telemetry on by default
 Test harness gotcha: `--factory-startup` scenes contain the default Cube at the origin; start from
 `read_factory_settings(use_empty=True)`. `mesh.materials.clear()` resets every face to slot 0.
 
+## Circuit tutor (Phase 3: "Why does an LED need a resistor?")
+`python -m director.tutor` (one turn: `--text`; offline: `--simulate --mock`). Nemotron only picks ONE tool
+(`teach_led_resistor` / `set_resistance` / `explain` / `clarify`, validated, 1 retry) and explains facts;
+`director/circuit/model.py` is the ONLY source of numbers (I = (Vs - Vf)/R, 9 V, 2 V LED, 330 ohm default);
+`display.py` maps them to labels / marker speed / glow (illustrative, proportional to current); `agent.py` rejects
+explanation numbers not in the facts (unit-aware) -> 1 retry -> template; `check.py` verifies Blender's read-back.
+Bridge: `{"kind": "circuit"}` requests (`shared/schema/circuit_request_v1.json`, additive) -> `blender_engine/circuit.py`
+(build / update on stable ids `battery_1 resistor_1 led_1 wire_1..3 flow_1 board_1 label_*`; flow = Geometry Nodes
+markers, `modifiers["Flow"].properties.inputs.Socket_N.value` in Blender 5.x). Docs: `docs/CIRCUIT_TUTOR.md`.
+Checks: `blender -b --factory-startup --python blender_engine/circuit_check.py`, `python -m director.dev.circuit_e2e [--mock]`.
+
 ## Ops
 `add`, `modify` (shifts an animated channel instead of wiping it), `delete`, `animate` (2 keys; start = value the
 object actually has at start_frame, so segments chain), `bounce` (cycles x Z hop, ends at start height). Timeline is
@@ -72,8 +83,10 @@ python -m director.cli --send --trace                  # interactive multi-turn
 python -m director.cli --inspect                       # live scene JSON
 python -m director.nvidia_smoke / director.vision_smoke   # live API checks
 blender -b --python blender_engine/phase1_check.py     # Phase 1 engine checks in real Blender
-python -m director.dev.phase1_e2e [--mock]             # Phase 1 end-to-end, saves docs/phase1_demo.blend
+python -m director.dev.phase1_e2e [--mock]             # Phase 1 end-to-end; OVERWRITES docs/phase1_demo.blend unless --save PATH
 python -m director.dev.library_e2e [--mock]            # asset-library end-to-end (needs built library)
+python -m director.tutor                               # circuit tutor, interactive (Blender worker running)
+python -m director.dev.circuit_e2e [--mock]            # circuit lesson end-to-end, 3 prompts, private bridge
 ```
 Flags: `--mock` (offline model), `--reset`, `--mode auto|create|edit`, `--manifest PATH`, `--json`, `-v`,
 `--no-verify`, `--max-corrections N`, `--timeout S`.

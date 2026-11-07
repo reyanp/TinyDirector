@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinydirector.local/schema/circuit_request_v1.json",
+  "title": "TinyDirector circuit lesson request v1 (ADDITIVE: does not change scene_plan_v1 / scene_result_v1)",
+  "description": "Written by the director to shared/inbox/<request_id>.json for the LED + resistor lesson. Every number is computed by director/circuit/model.py; the Blender engine only draws it and reads it back. The worker answers with a scene_result_v1 document plus an optional 'circuit' read-back block.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schema_version", "request_id", "action", "circuit", "display"],
+  "properties": {
+    "kind": { "const": "circuit" },
+    "schema_version": { "const": 1 },
+    "request_id": { "type": "string", "pattern": "^[A-Za-z0-9_\\-]{1,80}$" },
+    "action": { "enum": ["build", "update"], "description": "build = (re)construct the lesson with the build-up animation; update = change values on the existing objects only" },
+    "circuit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_v", "resistance_ohm", "led_vf"],
+      "properties": {
+        "source_v": { "type": "number", "exclusiveMinimum": 0, "maximum": 48 },
+        "resistance_ohm": { "type": "number", "minimum": 10, "maximum": 1000000 },
+        "led_vf": { "type": "number", "exclusiveMinimum": 0, "maximum": 5 }
+      }
+    },
+    "display": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["labels", "flow_lap_frames", "flow_markers", "led_emission", "led_light_w", "led_status", "resistor_bands"],
+      "properties": {
+        "labels": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["label_title", "label_battery", "label_resistor", "label_led", "label_current", "label_equation", "label_status", "label_caption", "label_legend"],
+          "patternProperties": { "^label_[a-z]+$": { "type": "string", "maxLength": 400 } }
+        },
+        "flow_lap_frames": { "type": ["number", "null"], "minimum": 1, "description": "frames per marker lap; null = no current" },
+        "flow_markers": { "type": "integer", "minimum": 1, "maximum": 200 },
+        "led_emission": { "type": "number", "minimum": 0, "maximum": 100 },
+        "led_light_w": { "type": "number", "minimum": 0, "maximum": 1000 },
+        "led_status": { "enum": ["off", "ok", "high", "over_max"] },
+        "resistor_bands": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" } },
+        "resistor_band_names": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

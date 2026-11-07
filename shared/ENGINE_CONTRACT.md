@@ -39,3 +39,16 @@ The Blender worker should behave identically, just with real objects.
 5. Delete the inbox file.
 
 Never execute code from a plan. Unknown ops are errors.
+
+## Circuit lesson requests (additive, `shared/schema/circuit_request_v1.json`)
+
+A file `{"kind": "circuit", "schema_version": 1, "request_id", "action": "build"|"update", "circuit": {...},
+"display": {...}}` drives the LED + resistor lesson (`blender_engine/circuit.py`). Every number in it was computed
+by `director/circuit/model.py`; the engine computes nothing electrical, it only draws and reads back.
+- `build`: remove any previous lesson objects, construct the lesson (build-up animation, then power-on at frame 80-92).
+- `update`: write the new values onto the EXISTING objects (each keeps its `circuit_uid`); fails if no lesson exists.
+- Both are all-or-nothing; if Blender raises, the previous lesson is restored.
+- The answer is a normal `scene_result_v1` document (`kind` omitted, `applied` 1 or 0) plus an extra `circuit`
+  block read from Blender data: `params` (custom props), `labels` (text bodies), `flow` (Geometry Nodes inputs and
+  the power F-curve), `led` (emission / light F-curves at the show frame), `resistor_bands` (band material colors),
+  `objects` (id, uid, position). Inspections include the same `circuit` block when a lesson exists.

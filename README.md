@@ -30,3 +30,11 @@ prompts (regenerate with `python -m director.dev.phase1_e2e`). Phase 1 notes: [d
 ![winter diorama](docs/phase2/winter_diorama.png)
 
 CC0 Poly Haven assets and stylized library meshes, used through the same Nemotron plans. See [docs/PHASE2.md](docs/PHASE2.md) and [docs/ASSETS.md](docs/ASSETS.md).
+
+## Interactive circuit tutor (Phase 3)
+![circuit lesson](docs/circuit/preview.png)
+
+"Why does an LED need a resistor?": Nemotron picks the tool and explains, a small calculation module produces
+every number, and Blender shows the same circuit updating (labels, resistor color bands, current-flow speed,
+LED glow). Run `blender --python blender_engine/worker.py`, then `python -m director.tutor`.
+See [docs/CIRCUIT_TUTOR.md](docs/CIRCUIT_TUTOR.md).

@@ -9,6 +9,8 @@ Options after `--`:   --keep         keep TinyDirector objects from a previous s
                       --save PATH    save a copy of the .blend after every job (e.g. a demo file)
                       --library      use the asset library (same as TD_ASSET_LIBRARY=1; see assets/catalog.json)
 Inbox files with {"kind": "inspect"} are read-only scene inspections: nothing is applied.
+Inbox files with {"kind": "circuit"} drive the LED + resistor lesson (blender_engine/circuit.py,
+shared/schema/circuit_request_v1.json); inspections then also carry a "circuit" read-back block.
 Env TINYDIRECTOR_ROOT overrides the repo root; TD_SHARED_DIR overrides the inbox/outbox/state folder.
 """
 
@@ -48,7 +50,7 @@ if str(ROOT) not in sys.path:
 
 import bpy  # noqa: E402
 
-from blender_engine import engine, snapshot  # noqa: E402
+from blender_engine import circuit, engine, snapshot  # noqa: E402
 
 SNAPSHOTS = os.environ.get("TD_SNAPSHOT", "1") != "0"
 SHARED = Path(os.environ["TD_SHARED_DIR"]).resolve() if os.environ.get("TD_SHARED_DIR") else ROOT / "shared"
@@ -80,7 +82,38 @@ def _redraw() -> None:
 
 
 def _snapshot() -> dict:
-    return engine.inspect("blender_startup")
+    return _inspect("blender_startup")
+
+
+def _inspect(rid: str) -> dict:
+    result = engine.inspect(rid)
+    lesson = circuit.read_back()
+    if lesson is not None:
+        result["circuit"] = lesson
+        result["other_objects"] = circuit.other_objects()
+    return result
+
+
+def _present_circuit(action: str) -> None:
+    """GUI only: look through the lesson camera with materials on, and play the animation."""
+    if bpy.app.background:
+        return
+    try:
+        windows = list(bpy.context.window_manager.windows)
+        view = None
+        for window in windows:
+            for area in window.screen.areas:
+                if area.type == "VIEW_3D":
+                    area.spaces.active.shading.type = "MATERIAL"
+                    area.spaces.active.region_3d.view_perspective = "CAMERA"
+                    view = view or (window, area)
+        if action == "build":
+            bpy.context.scene.frame_set(1)
+        if view and not any(w.screen.is_animation_playing for w in windows):
+            with bpy.context.temp_override(window=view[0], area=view[1]):
+                bpy.ops.screen.animation_play()
+    except Exception as exc:
+        print(f"[TinyDirector] could not set up the lesson view: {exc}")
 
 
 def _save_path() -> str | None:
@@ -99,11 +132,14 @@ def process_inbox() -> int:
         try:
             plan = json.loads(job.read_text(encoding="utf-8"))
             if isinstance(plan, dict) and plan.get("kind") == "inspect":
-                _write_json(OUTBOX / f"{rid}.json", engine.inspect(rid))
+                _write_json(OUTBOX / f"{rid}.json", _inspect(rid))
                 job.unlink(missing_ok=True)
                 handled += 1
                 continue
-            result = engine.make_result(rid, plan)
+            if isinstance(plan, dict) and plan.get("kind") == "circuit":
+                result = circuit.make_result(rid, plan)
+            else:
+                result = engine.make_result(rid, plan)
         except json.JSONDecodeError:
             continue  # partially written by a non-atomic writer; try next tick
         except Exception as exc:
@@ -115,13 +151,18 @@ def process_inbox() -> int:
             # render BEFORE writing the result so the image exists when the director sees the JSON
             try:
                 t0 = time.perf_counter()
-                snapshot.render(OUTBOX / f"{rid}.jpg")
+                if result.get("circuit_action"):  # lesson camera + EEVEE, at a powered-on frame
+                    circuit.render_preview(OUTBOX / f"{rid}.jpg", 960, 540, samples=16, file_format="JPEG")
+                else:
+                    snapshot.render(OUTBOX / f"{rid}.jpg")
                 result["snapshot"] = f"{rid}.jpg"
                 result["snapshot_ms"] = int((time.perf_counter() - t0) * 1000)
             except Exception as exc:
                 print(f"[TinyDirector] snapshot failed: {exc}")
         _write_json(OUTBOX / f"{rid}.json", result)
         _write_json(STATE / "blender_manifest.json", result)
+        if result.get("circuit_action") and result.get("applied"):
+            _present_circuit(result["circuit_action"])
         save = _save_path()
         if save and result.get("applied"):
             try:
@@ -178,6 +219,7 @@ def start() -> None:
     OUTBOX.mkdir(parents=True, exist_ok=True)
     if "--keep" not in args:
         engine.reset_scene()
+        circuit.clear()
     setup_scene()
     _write_json(STATE / "blender_manifest.json", _snapshot())
     if "--once" in args:
