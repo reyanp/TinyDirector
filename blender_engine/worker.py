@@ -44,8 +44,9 @@ if str(ROOT) not in sys.path:
 
 import bpy  # noqa: E402
 
-from blender_engine import engine  # noqa: E402
+from blender_engine import engine, snapshot  # noqa: E402
 
+SNAPSHOTS = os.environ.get("TD_SNAPSHOT", "1") != "0"
 INBOX = ROOT / "shared" / "inbox"
 OUTBOX = ROOT / "shared" / "outbox"
 STATE = ROOT / "shared" / "state"
@@ -95,6 +96,15 @@ def process_inbox() -> int:
             result = {"schema_version": 1, "request_id": rid, "status": "error", "applied": 0,
                       "errors": [f"{type(exc).__name__}: {exc}"], "scene_version": engine.scene_version(),
                       "scene_objects": engine.read_scene()}
+        if SNAPSHOTS and result.get("applied"):
+            # render BEFORE writing the result so the image exists when the director sees the JSON
+            try:
+                t0 = time.perf_counter()
+                snapshot.render(OUTBOX / f"{rid}.jpg")
+                result["snapshot"] = f"{rid}.jpg"
+                result["snapshot_ms"] = int((time.perf_counter() - t0) * 1000)
+            except Exception as exc:
+                print(f"[TinyDirector] snapshot failed: {exc}")
         _write_json(OUTBOX / f"{rid}.json", result)
         _write_json(STATE / "blender_manifest.json", result)
         try:

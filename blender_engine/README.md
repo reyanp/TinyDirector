@@ -25,6 +25,7 @@ Press **Space** in the viewport to play animations ("make the tree spin").
 ## Files
 - `worker.py` — timer loop: inbox → engine → outbox; writes `shared/state/blender_manifest.json` at startup and after each job.
 - `engine.py` — applies ops, re-validates each op against the live scene, reads state back from Blender objects.
+- `snapshot.py` — after each job, renders a 640px JPEG (Workbench) from an auto-framed camera into `shared/outbox/<id>.jpg` for the visual check. `TD_SNAPSHOT=0` disables it.
 - `assets.py` — procedural meshes for the 13 assets (one object per id, material slot 0 = the plan's color).
 - `headless_check.py` — `blender -b --python blender_engine/headless_check.py -- --render preview.png`
 

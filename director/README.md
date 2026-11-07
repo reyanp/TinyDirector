@@ -24,6 +24,7 @@ A Brev `bak-...` key is for the `brev` CLI and does **not** work for model calls
 ```bash
 python -m pytest director/tests -q                     # offline tests, no key, no Blender
 python -m director.nvidia_smoke                         # one real Nemotron call: model, latency, answer
+python -m director.vision_smoke                         # Nemotron VL describes an image (latest Blender snapshot)
 
 # dry run: plan + validate only
 python -m director.cli --mode create --text "Create a red mug next to a tree" --dry-run
@@ -59,6 +60,10 @@ python -m director.cli --send --text "Change only the mug to blue" --trace
 4. **Validate** – JSON Schema + scene rules (ids exist, no duplicates, no delete-and-recreate, id prefix = asset, frame ranges). One corrective retry with the exact errors, then fail. Model output is never executed.
 5. **Execute** – atomic write to `shared/inbox/<request_id>.json`; wait for `shared/outbox/<request_id>.json`.
 6. **Observe** – diff before/after: added / changed / removed / unchanged ids; save as the next manifest.
+7. **Verify (vision)** – with `--send`, Blender renders a small JPEG of the scene; Nemotron VL compares the image
+   with the request and the object list. On a mismatch it writes ONE short fix instruction, which goes back through
+   the planner + validator + Blender (`--max-corrections`, default 1), then the result is checked again.
+   `--no-verify` turns this off. An unreadable verdict is treated as "unverified", never as a reason to act.
 Each run's trace is saved to `shared/state/traces/<request_id>.json`.
 
 ## Config (env vars or .env)
@@ -69,6 +74,7 @@ Each run's trace is saved to `shared/state/traces/<request_id>.json`.
 | `NEMOTRON_BASE_URL` | `https://integrate.api.nvidia.com/v1` (point at a Brev NIM to self-host) |
 | `NEMOTRON_THINKING` | `0`; `1` enables reasoning (slower, uses more tokens) |
 | `NEMOTRON_TIMEOUT` | `90` seconds |
+| `NEMOTRON_VL_MODEL` | same as `NEMOTRON_MODEL`; model used for the visual check |
 
 ## Troubleshooting
 | symptom | fix |
