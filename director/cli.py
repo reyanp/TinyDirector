@@ -152,6 +152,12 @@ def main(argv: list[str] | None = None) -> int:
             if manifest is None:
                 print(f"CONFIG ERROR: manifest not found: {args.manifest}", file=sys.stderr)
                 return 2
+        elif args.send:
+            # Prefer whichever is newer: our last saved result, or the snapshot Blender writes at
+            # startup and after every job (so a freshly restarted Blender is never out of sync).
+            candidates = [p for p in (paths.LATEST_MANIFEST, paths.STATE / "blender_manifest.json") if p.exists()]
+            newest = max(candidates, key=lambda p: p.stat().st_mtime) if candidates else None
+            manifest = bridge.load_manifest(newest) if newest else None
         else:
             manifest = bridge.load_manifest(state_file)
     except json.JSONDecodeError as exc:

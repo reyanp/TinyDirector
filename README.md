@@ -4,6 +4,13 @@ Talk to Blender. NVIDIA Nemotron reads the real scene, plans a constrained set o
 
 - `director/` — Nemotron planner, validator, CLI, inbox/outbox bridge ([director/README.md](director/README.md))
 - `shared/schema/` — the plan + result contract; `shared/ENGINE_CONTRACT.md` — what the Blender side implements
-- `blender_engine/` — Blender executor (in progress)
+- `blender_engine/` — Blender executor: worker, procedural assets, Windows launcher ([blender_engine/README.md](blender_engine/README.md))
 
 Quick start: `python -m pytest director/tests -q`, then see director/README.md.
+
+## Demo in two terminals (Windows)
+```powershell
+powershell -ExecutionPolicy Bypass -File blender_engine\run_blender.ps1     # terminal 1 (opens Blender)
+python -m director.cli --send --text "Create a red mug next to a tree" --trace   # terminal 2
+python -m director.cli --send --text "Change only the mug to blue" --trace
+```

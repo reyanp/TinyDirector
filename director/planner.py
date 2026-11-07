@@ -54,7 +54,8 @@ Operations:
 
 Rules:
 1. Supported assets ONLY: {assets}. Never invent assets or operations.
-2. If the request needs something unsupported or is too ambiguous, return mode "clarify" with "operations": [] and a short
+2. If the request needs something unsupported or is too ambiguous, return mode "clarify" with "operations": [] (always
+   include the empty list) and a short
    "message" that says what is unsupported and offers the closest supported option. Do not silently substitute.
 3. Edits: reference ids that exist in the scene manifest exactly. Touch ONLY what the user asked about; every other
    object must be left alone (do not delete and re-create; use modify). "the mug" means the existing mug.
@@ -174,6 +175,8 @@ def plan(text: str, client: ModelClient, manifest: dict | None = None, mode: str
             errors = [f"could not parse JSON: {exc}"]
         else:
             obj["request_id"] = rid  # we own request ids, not the model
+            if obj.get("mode") == "clarify" and "operations" not in obj:
+                obj["operations"] = []  # harmless normalization: clarify never executes anything
             errors = validate_plan(obj, manifest, expected_mode=expected)
             if not errors:
                 n = len(obj["operations"])
