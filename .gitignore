@@ -1,0 +1,21 @@
+# secrets
+.env
+*.env
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# runtime bridge files (never committed; GitHub does not sync these)
+shared/inbox/*
+shared/outbox/*
+shared/state/*
+!shared/inbox/.gitkeep
+!shared/outbox/.gitkeep
+!shared/state/.gitkeep
+
+# blender
+*.blend1

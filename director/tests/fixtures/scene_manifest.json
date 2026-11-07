@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "request_id": "fixture_manifest",
+  "status": "ok",
+  "errors": [],
+  "scene_version": 1,
+  "scene_objects": [
+    {"id": "mug_1", "asset": "mug", "color": "#D95C52", "position": [1, 0, 0.8], "scale": 1},
+    {"id": "tree_1", "asset": "tree", "color": "#457A5B", "position": [-2, 1.5, 0], "scale": 1.2}
+  ]
+}

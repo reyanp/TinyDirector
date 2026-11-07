@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "request_id": "fixture_create_001",
+  "mode": "create",
+  "summary": "Add a red mug next to a small tree",
+  "operations": [
+    {"op": "add", "id": "tree_1", "asset": "tree", "color": "#457A5B", "position": [-2, 1.5, 0], "scale": 1.2},
+    {"op": "add", "id": "mug_1", "asset": "mug", "color": "#D95C52", "position": [1, 0, 0.8], "scale": 1}
+  ]
+}

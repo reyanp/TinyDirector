@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinydirector.local/schema/scene_result_v1.json",
+  "title": "TinyDirector execution result / scene manifest v1",
+  "description": "Written by the Blender engine to shared/outbox/<request_id>.json. scene_objects is the REAL post-execution scene and doubles as the manifest for the next edit.",
+  "type": "object",
+  "required": ["schema_version", "request_id", "status", "errors", "scene_version", "scene_objects"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "request_id": { "type": "string" },
+    "status": { "enum": ["ok", "partial", "error"] },
+    "applied": { "type": "integer", "minimum": 0 },
+    "errors": { "type": "array", "items": { "type": "string" } },
+    "scene_version": { "type": "integer", "minimum": 0 },
+    "scene_objects": { "type": "array", "items": { "$ref": "#/$defs/scene_object" } }
+  },
+  "$defs": {
+    "scene_object": {
+      "type": "object",
+      "required": ["id", "asset", "position"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z]+_[0-9]{1,3}$" },
+        "asset": { "type": "string" },
+        "color": { "type": "string" },
+        "position": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+        "rotation": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+        "scale": { "type": "number" }
+      }
+    }
+  }
+}

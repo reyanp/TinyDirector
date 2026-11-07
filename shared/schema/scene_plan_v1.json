@@ -1,0 +1,126 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinydirector.local/schema/scene_plan_v1.json",
+  "title": "TinyDirector scene plan v1",
+  "description": "A plan is DATA ONLY. The Blender engine executes these operations; it never runs code from a plan.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "request_id", "mode", "summary", "operations"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "request_id": { "type": "string", "pattern": "^[A-Za-z0-9_-]{6,64}$" },
+    "mode": {
+      "enum": ["create", "edit", "clarify"],
+      "description": "create = build new objects, edit = change existing scene, clarify = request unsupported/ambiguous, no operations."
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 300 },
+    "message": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Required when mode=clarify: what is unsupported or what to ask the user."
+    },
+    "operations": {
+      "type": "array",
+      "maxItems": 24,
+      "items": { "$ref": "#/$defs/operation" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "mode": { "const": "clarify" } } },
+      "then": { "required": ["message"], "properties": { "operations": { "maxItems": 0 } } },
+      "else": { "properties": { "operations": { "minItems": 1 } } }
+    }
+  ],
+  "$defs": {
+    "object_id": { "type": "string", "pattern": "^[a-z]+_[0-9]{1,3}$" },
+    "asset": {
+      "enum": ["mug", "tree", "rock", "cube", "sphere", "cylinder", "cone", "table", "chair", "lamp", "tent", "campfire", "ground"]
+    },
+    "color": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+    "vec3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number", "minimum": -50, "maximum": 50 }
+    },
+    "rotation": {
+      "description": "Euler degrees XYZ",
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "number", "minimum": -360, "maximum": 360 }
+    },
+    "scale": { "type": "number", "exclusiveMinimum": 0, "maximum": 20 },
+    "operation": {
+      "oneOf": [
+        { "$ref": "#/$defs/add" },
+        { "$ref": "#/$defs/modify" },
+        { "$ref": "#/$defs/delete" },
+        { "$ref": "#/$defs/animate" }
+      ]
+    },
+    "add": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "id", "asset", "position"],
+      "properties": {
+        "op": { "const": "add" },
+        "id": { "$ref": "#/$defs/object_id" },
+        "asset": { "$ref": "#/$defs/asset" },
+        "color": { "$ref": "#/$defs/color" },
+        "position": { "$ref": "#/$defs/vec3" },
+        "rotation": { "$ref": "#/$defs/rotation" },
+        "scale": { "$ref": "#/$defs/scale" }
+      }
+    },
+    "modify": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "id", "set"],
+      "properties": {
+        "op": { "const": "modify" },
+        "id": { "$ref": "#/$defs/object_id" },
+        "set": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "color": { "$ref": "#/$defs/color" },
+            "position": { "$ref": "#/$defs/vec3" },
+            "rotation": { "$ref": "#/$defs/rotation" },
+            "scale": { "$ref": "#/$defs/scale" }
+          }
+        }
+      }
+    },
+    "delete": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "id"],
+      "properties": {
+        "op": { "const": "delete" },
+        "id": { "$ref": "#/$defs/object_id" }
+      }
+    },
+    "animate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "id", "property", "start_frame", "end_frame", "to"],
+      "properties": {
+        "op": { "const": "animate" },
+        "id": { "$ref": "#/$defs/object_id" },
+        "property": { "enum": ["position", "rotation", "scale"] },
+        "start_frame": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "end_frame": { "type": "integer", "minimum": 2, "maximum": 1000 },
+        "to": {
+          "description": "Target value at end_frame. vec3 for position/rotation(deg); [s,s,s] for scale.",
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": { "type": "number", "minimum": -360, "maximum": 360 }
+        }
+      }
+    }
+  }
+}

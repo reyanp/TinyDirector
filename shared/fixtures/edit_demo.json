@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "request_id": "fixture_edit_001",
+  "mode": "edit",
+  "summary": "Change only the mug to blue",
+  "operations": [
+    {"op": "modify", "id": "mug_1", "set": {"color": "#3B6FD9"}}
+  ]
+}
