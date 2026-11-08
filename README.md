@@ -52,6 +52,8 @@ Nemotron still decides every turn. The Type tab in the details drawer is the tex
 callouts, or "Compare what happens if I increase the resistor to 1,000 ohms" for a side-by-side what-if copy
 (the original stays untouched; "go back to the original" removes it). See [docs/WHATIF.md](docs/WHATIF.md).
 
+**Spot the Scam.** One cybersecurity lesson for the T-Mobile scam challenge. Say "Poyo, teach me how to recognize scam texts." A 3D phone shows a FICTIONAL suspicious text. Poyo walks through its warning signs (found by a labeled heuristic prototype, not a trained model), asks what you would do, and shows both choices as hypothetical simulations side by side. It ends with practical steps: verify in the official app, report the text to 7726, and recover if you already shared something. See [docs/SCAM_LESSON.md](docs/SCAM_LESSON.md).
+
 ## Knowledge base
 A SQLite knowledge base (`director/knowledge/`, built from the reviewed `seed.json`) holds concepts, prerequisites,
 cited facts, common misconceptions, demo templates and links to the calculators and verifiers. Every turn retrieves

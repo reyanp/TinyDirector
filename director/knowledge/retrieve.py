@@ -72,7 +72,7 @@ class Knowledge:
         elif s and s["tool"] == "teach_topic":
             lines.append(f"demo for a NEW topic: teach_topic (lesson template {self.template['title']!r})")
         elif s:
-            lines.append(f"demo: {s['tool']} (the interactive LED + resistor circuit)")
+            lines.append(f"demo: {s['tool']} (interactive: {self.template['title']})")
         return "\n".join(lines)
 
     def prompt_block(self) -> str:

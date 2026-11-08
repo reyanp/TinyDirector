@@ -103,6 +103,21 @@ without one removes it); focus `current` emphasises the arrows. Split reality = 
 renders camera moves (e2e evidence). Checks: `blender -b --factory-startup --python blender_engine/compare_check.py`,
 `python -m director.dev.whatif_e2e [--mock]` (private bridge `shared/state/whatif_run`).
 
+## Spot the Scam (ONE cybersecurity lesson, T-Mobile challenge; docs/SCAM_LESSON.md)
+Tutor tools `teach_scam_texts` / `scam_inspect` / `scam_choose {choice: follow_link|verify_official}` / `scam_recover`
+(+ `explain`, `end_comparison` while the phone is on stage), routed from `tutor.run_turn` to `director/scam/lesson.py`.
+FICTIONAL scenario only (`scenario.py`: 555-01xx sender, `.example` link, made-up "CarrierAlert"); no real messages,
+no phishing page (outcomes are 3D text labeled hypothetical simulations). Detector = HEURISTIC PROTOTYPE
+(`detector.py`, keyword rules, no probability; T-Mobile dataset/taxonomy/baseline NOT available; toy eval
+`python -m director.scam.evaluate`, 30 hand-written examples: never present as real accuracy). Explanations: scam
+EXPLAINER prompt + `lesson_rules` (no "tap the link", no certainty, no "AI detected", no repeats) + KB misconceptions;
+the template key points are the fallback only (never shown to the model). Bridge `{"kind": "scam"}`
+(`shared/schema/scam_request_v1.json`, additive: build / mark / outcomes / clear_outcomes) -> `blender_engine/scam.py`
+(objects carry `circuit_part` so `circuit.clear` removes them; own `scam_id`; direction targets phone/message/sender/
+brand/body/urgency/link/outcomes/outcome_a/outcome_b, amber outlines instead of the halo). `check.py` verifies the
+read-back. Checks: `blender -b --factory-startup --python blender_engine/scam_check.py`,
+`python -m director.dev.scam_e2e [--mock]` (private bridge `shared/state/scam_run`). Do not add more scenarios.
+
 ## Knowledge base (P1: director/knowledge/, docs/KNOWLEDGE.md)
 `seed.json` (reviewed, in git) -> SQLite `<shared>/state/knowledge.sqlite` (`TD_KNOWLEDGE_DB`; auto-rebuilt when the
 seed changes; tests use a tmp DB via conftest). `python -m director.knowledge build|stats|query "..."|graph`.
@@ -157,6 +172,7 @@ python -m director.lesson --text "..." [--send]        # multi-agent lesson (Nem
 python -m director.server [--mock --simulate]           # Poyo companion UI at http://127.0.0.1:8765
 python -m director.studio --blender                    # Blender stage (-- --stage) + Poyo voice companion
 python -m director.dev.voice_e2e [--mock]              # voice demo end-to-end (synthesized speech, private bridge)
+python -m director.dev.scam_e2e [--mock]               # Spot the Scam end-to-end (6 turns, private bridge)
 blender -b --factory-startup --python blender_engine/direction_check.py   # camera focus / halo / caption checks
 python -m director.knowledge query "..."               # knowledge-base retrieval (what Nemotron is given)
 ```

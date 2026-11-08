@@ -29,14 +29,17 @@ const PIPELINE = [
   ["explain", ["explain"]],
 ];
 const SUGGEST_START = ["Teach me why LEDs need resistors.", "How does a voltage divider work?",
-                       "How do parallel circuits work?"];
+                       "How do parallel circuits work?", "Teach me how to recognize scam texts."];
 const SUGGEST_TOPIC = ["Explain that in simpler terms.", "Teach me why LEDs need resistors."];
 const SUGGEST_CIRCUIT = ["What if I make the resistor 1,000 ohms?", "Why did it get dimmer?", "Increase the resistance.",
                          "Show me the resistor.", "Show me the current.", "Explain that in simpler terms."];
+const SUGGEST_SCAM = ["What makes that message suspicious?", "What if I follow the link?", "What should I do instead?",
+                      "What if I already typed my password?"];
 const IDLE_HINT = "Hi! Ask me how a circuit works.";
 function idleHint() {
   const kind = state.lesson && (state.lesson.info || {}).kind;
   if (kind === "circuit") return "Try: “What if I make the resistor 1,000 ohms?” or “Why?”";
+  if (kind === "scam") return "Try: “What makes that message suspicious?”";
   return state.lesson ? "Ask me about the lesson on stage." : IDLE_HINT;
 }
 
@@ -108,6 +111,7 @@ function renderLesson() {
   const chip = (t, cls = "") => { const c = document.createElement("span"); c.className = `chip ${cls}`; c.textContent = t; return c; };
   let chips = [];
   if (info.kind === "circuit") chips = (info.chips || []).slice(0, 2);   // formatted by the calculation module
+  if (info.kind === "scam") chips = (info.chips || []).slice(0, 3);      // FICTIONAL label, heuristic result, choice
   const nodes = chips.map((t, i) => chip(t, lastChips.length && lastChips[i] !== t ? "changed" : ""));
   if (info.kind === "topic") nodes.push(chip(`built by ${info.builder}`, "neutral"));
   els.meta.replaceChildren(...nodes);
@@ -163,7 +167,8 @@ function groundingEl(g) {
   const num = document.createElement("span");
   num.className = g.numbers === "calculated" ? "calc" : g.numbers === "cited" ? "cited" : "";
   num.textContent = { calculated: "✓ numbers checked against the calculation",
-                      cited: "numbers from cited sources (not calculated)", none: "no numbers to check" }[g.numbers] || "";
+                      cited: "numbers from cited sources (not calculated)", none: "no numbers to check",
+                      scenario: "numbers only from the lesson's fictional message and guidance" }[g.numbers] || "";
   sum.append(num, document.createTextNode(facts.length ? ` · ${facts.length} knowledge-base fact${facts.length > 1 ? "s" : ""}` : ""));
   det.appendChild(sum);
   const ul = document.createElement("ul");
@@ -213,7 +218,8 @@ function renderMessages() {
 }
 function renderSuggestions() {
   const kind = state.lesson && (state.lesson.info || {}).kind;
-  const list = kind === "circuit" ? SUGGEST_CIRCUIT : kind === "topic" ? SUGGEST_TOPIC : SUGGEST_START;
+  const list = kind === "circuit" ? SUGGEST_CIRCUIT : kind === "topic" ? SUGGEST_TOPIC : kind === "scam" ? SUGGEST_SCAM
+    : SUGGEST_START;
   els.suggestions.replaceChildren(...list.map((t) => {
     const b = document.createElement("button");
     b.type = "button";

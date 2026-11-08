@@ -60,8 +60,10 @@ def test_build_counts_and_fact_status(tmp_path):
     demo = dict(con.execute("SELECT id, demo FROM concepts"))
     assert demo["parallel_circuits"] == "explanation_only"  # no calculator / 3D demo for it yet
     assert demo["current_limiting"] == "interactive" and demo["voltage_divider"] == "lesson"
-    for (calc,) in con.execute("SELECT calculator FROM templates"):  # every demo has a working calculator
-        assert con.execute("SELECT kind FROM checks WHERE id = ?", (calc,)).fetchone()[0] == "calculator"
+    for tid, calc in con.execute("SELECT id, calculator FROM templates"):  # every demo has a working calculator
+        kind = con.execute("SELECT kind FROM checks WHERE id = ?", (calc,)).fetchone()[0]
+        # ... except Spot the Scam, driven by the HEURISTIC detector (never mixed up with a calculator)
+        assert kind == ("detector" if tid == "spot_the_scam" else "calculator"), tid
 
 
 @pytest.mark.parametrize("mutate, message", [

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "about": "Source of truth for the tutor's knowledge base. `python -m director.knowledge build` (or first use) turns it into SQLite. Facts are paraphrased; `source` is a chapter/tutorial-level pointer. A fact with a `check` is re-computed by the named calculator at build time and only then marked verified; every other fact is 'sourced' (cited, not machine-checked). Misconception `claim` regexes flag wrong statements in model explanations (sentences with a negation are skipped).",
+  "about": "Source of truth for the tutor's knowledge base. `python -m director.knowledge build` (or first use) turns it into SQLite. Facts are paraphrased; `source` is a chapter/tutorial-level pointer. A fact with a `check` is re-computed by the named calculator at build time and only then marked verified; every other fact is 'sourced' (cited, not machine-checked). Misconception `claim` regexes flag wrong statements in model explanations (sentences with a negation are skipped). The 'Spot the Scam' concepts (smishing ... protective actions) cite U.S. consumer-protection guidance (FTC, CISA, FCC); their demo is a FICTIONAL message and its warning signs come from a heuristic prototype (scam.detect), not a trained classifier.",
 
   "sources": [
     {"id": "openstax_cp2e", "title": "OpenStax College Physics 2e, ch. 20 (current, resistance, Ohm's law, power) and ch. 21 (series and parallel)", "url": "https://openstax.org/details/books/college-physics-2e", "license": "CC BY 4.0"},
@@ -11,7 +11,14 @@
     {"id": "sf_dividers", "title": "SparkFun: Voltage Dividers", "url": "https://learn.sparkfun.com/tutorials/voltage-dividers", "license": "CC BY-SA 4.0"},
     {"id": "sf_transistors", "title": "SparkFun: Transistors", "url": "https://learn.sparkfun.com/tutorials/transistors", "license": "CC BY-SA 4.0"},
     {"id": "liec_semi", "title": "Kuphaldt, Lessons in Electric Circuits Vol. III (Semiconductors): BJTs and insulated-gate FETs", "url": "https://www.allaboutcircuits.com/textbook/semiconductors/", "license": "Design Science License"},
-    {"id": "td_model", "title": "TinyDirector calculation modules (director/circuit/model.py, director/lesson/calculators.py): the simplified models this tutor computes with", "url": "", "license": "project"}
+    {"id": "td_model", "title": "TinyDirector calculation modules (director/circuit/model.py, director/lesson/calculators.py): the simplified models this tutor computes with", "url": "", "license": "project"},
+    {"id": "ftc_spam_texts", "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages", "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages", "license": "U.S. government work"},
+    {"id": "ftc_phishing", "title": "FTC Consumer Advice: How To Recognize and Avoid Phishing Scams", "url": "https://consumer.ftc.gov/articles/how-recognize-avoid-phishing-scams", "license": "U.S. government work"},
+    {"id": "ftc_scammed", "title": "FTC Consumer Advice: What To Do if You Were Scammed", "url": "https://consumer.ftc.gov/system/files/consumer_ftc_gov/pdf/What%20to%20do%20if%20you%20were%20scammed_EN_0.pdf", "license": "U.S. government work"},
+    {"id": "cisa_social", "title": "CISA: Avoiding Social Engineering and Phishing Attacks", "url": "https://www.cisa.gov/news-events/news/avoiding-social-engineering-and-phishing-attacks", "license": "U.S. government work"},
+    {"id": "cisa_phishing", "title": "CISA Secure Our World: Recognize and Report Phishing", "url": "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing", "license": "U.S. government work"},
+    {"id": "fcc_sim_swap", "title": "FCC Consumer Guide: Protect Yourself From SIM Swapping and Port-Out Fraud", "url": "https://www.fcc.gov/consumers/guides/protect-yourself-sim-swapping-and-port-out-fraud", "license": "U.S. government work"},
+    {"id": "td_scam_heuristic", "title": "TinyDirector heuristic scam detector (director/scam/detector.py): keyword rules written for the Spot the Scam lesson", "url": "", "license": "project"}
   ],
 
   "concepts": [
@@ -42,7 +49,21 @@
     {"id": "mosfet", "name": "MOSFET", "short": "MOSFET", "summary": "A voltage-controlled transistor: the voltage on its insulated gate switches the drain current.",
      "aliases": ["mosfet", "mosfets", "fet", "fets", "gate", "gate voltage", "n-channel", "drain", "logic-level"]},
     {"id": "voltage_divider", "name": "Voltage divider", "short": "Divider", "summary": "Two series resistors that split a voltage: V_out = V × R2 / (R1 + R2).",
-     "aliases": ["voltage divider", "voltage dividers", "divider", "dividers", "potential divider", "divide the voltage", "divide a voltage"]}
+     "aliases": ["voltage divider", "voltage dividers", "divider", "dividers", "potential divider", "divide the voltage", "divide a voltage"]},
+    {"id": "social_engineering", "name": "Social engineering", "short": "Social eng.", "summary": "Manipulating people (with trust, fear or urgency) into giving away information or access.",
+     "aliases": ["social engineering", "manipulate", "manipulates", "manipulation", "trick me", "tricks people", "tricked", "pressure", "urgency", "urgent", "deadline", "scare tactic", "scare tactics"]},
+    {"id": "suspicious_links", "name": "Suspicious links", "short": "Links", "summary": "Links in unexpected messages that may lead to look-alike pages or malware.",
+     "aliases": ["suspicious link", "suspicious links", "link", "links", "url", "urls", "fake website", "fake site", "fake page", "look-alike", "lookalike", "follow the link", "click the link", "tap the link", "open the link", "https", "padlock"]},
+    {"id": "impersonation", "name": "Impersonation", "short": "Impersonation", "summary": "A scammer posing as a trusted organization, such as your carrier or bank.",
+     "aliases": ["impersonation", "impersonate", "impersonates", "impersonating", "pretend to be", "pretends to be", "pretending to be", "really from", "actually from", "my carrier", "your carrier", "unknown number", "unknown sender", "who sent"]},
+    {"id": "credential_theft", "name": "Credential theft", "short": "Credentials", "summary": "Stealing login details (password, PIN, one-time code) to take over an account.",
+     "aliases": ["credential theft", "credentials", "password", "passwords", "account pin", "my pin", "passcode", "one-time code", "verification code", "login details", "account takeover", "sim swap", "sim swapping", "port-out", "identity theft", "typed my password", "entered my password", "gave my password"]},
+    {"id": "smishing", "name": "Smishing (scam texts)", "short": "Smishing", "summary": "Phishing by text message: a fake text that pushes you to tap a link, reply or share details.",
+     "aliases": ["smishing", "scam text", "scam texts", "scam message", "scam messages", "text scam", "text scams", "phishing text", "phishing texts", "phishing", "spam text", "spam texts", "fake text", "fake texts", "suspicious text", "suspicious message", "suspicious", "scam", "scams", "scammer", "scammers", "warning signs", "red flag", "red flags", "spot the scam"]},
+    {"id": "account_verification", "name": "Account verification", "short": "Verify", "summary": "Checking an alert yourself through an official channel you open, never through the message.",
+     "aliases": ["account verification", "verify independently", "verify it", "verify the message", "official app", "carrier's app", "carrier app", "official website", "official channel", "call my carrier", "call the carrier", "check my account", "number on my bill", "number on the bill"]},
+    {"id": "protective_actions", "name": "Protective actions", "short": "Protect", "summary": "What to do with a scam text, and the recovery steps if you already shared something.",
+     "aliases": ["protective actions", "protect myself", "protect yourself", "stay safe", "what should i do", "what do i do", "do instead", "report it", "report the text", "report a scam", "7726", "already typed", "already clicked", "already entered", "already gave", "i clicked", "i typed"]}
   ],
 
   "relations": [
@@ -66,7 +87,19 @@
     {"src": "current_limiting", "rel": "uses", "dst": "power", "note": "the resistor turns the extra voltage into heat"},
     {"src": "transistor", "rel": "uses", "dst": "led", "note": "the lesson switches an LED load"},
     {"src": "parallel_circuits", "rel": "contrasts", "dst": "series_circuits"},
-    {"src": "bjt", "rel": "contrasts", "dst": "mosfet"}
+    {"src": "bjt", "rel": "contrasts", "dst": "mosfet"},
+    {"src": "impersonation", "rel": "is_a", "dst": "social_engineering"},
+    {"src": "credential_theft", "rel": "requires", "dst": "social_engineering", "note": "the victim is tricked into handing them over"},
+    {"src": "credential_theft", "rel": "uses", "dst": "suspicious_links", "note": "a look-alike sign-in page"},
+    {"src": "smishing", "rel": "is_a", "dst": "social_engineering"},
+    {"src": "smishing", "rel": "requires", "dst": "impersonation"},
+    {"src": "smishing", "rel": "requires", "dst": "suspicious_links"},
+    {"src": "smishing", "rel": "uses", "dst": "credential_theft", "note": "the usual goal"},
+    {"src": "account_verification", "rel": "requires", "dst": "impersonation", "note": "it checks who really sent the alert"},
+    {"src": "account_verification", "rel": "contrasts", "dst": "suspicious_links", "note": "open the official app instead of the link"},
+    {"src": "protective_actions", "rel": "requires", "dst": "smishing"},
+    {"src": "protective_actions", "rel": "requires", "dst": "credential_theft"},
+    {"src": "protective_actions", "rel": "uses", "dst": "account_verification"}
   ],
 
   "facts": [
@@ -174,7 +207,25 @@
     {"id": "divider_loading", "concept": "voltage_divider", "kind": "law", "source": "sf_dividers",
      "text": "Anything connected to a divider's output draws current and pulls the output voltage below the formula's value."},
     {"id": "divider_not_supply", "concept": "voltage_divider", "kind": "rule_of_thumb", "source": "sf_dividers",
-     "text": "A voltage divider should not be used to power a device: the load current also flows through R1, wasting power as heat, and the output sags."}
+     "text": "A voltage divider should not be used to power a device: the load current also flows through R1, wasting power as heat, and the output sags."},
+    {"id": "smishing_def", "concept": "smishing", "kind": "definition", "source": "ftc_spam_texts", "text": "Smishing is phishing by text message: a text that pretends to come from a company you trust so that you tap a link, reply, or share account or payment details."},
+    {"id": "smishing_lures", "concept": "smishing", "kind": "rule_of_thumb", "source": "ftc_spam_texts", "text": "Common scam-text lures are fake fraud or sign-in alerts, package delivery problems, unpaid tolls, and prize or refund offers."},
+    {"id": "smishing_signs", "concept": "smishing", "kind": "rule_of_thumb", "source": "cisa_phishing", "text": "Warning signs of phishing include urgent or emotional language, requests for personal or financial information, and misspelled or look-alike addresses."},
+    {"id": "smishing_heuristic", "concept": "smishing", "kind": "model_assumption", "source": "td_scam_heuristic", "text": "This lesson's warning signs come from a keyword heuristic prototype, not a trained classifier: it gives no calibrated probability and can miss new wording or flag real alerts."},
+    {"id": "social_eng_def", "concept": "social_engineering", "kind": "definition", "source": "cisa_social", "text": "Social engineering manipulates people rather than computers: the attacker uses trust, fear or urgency so the victim hands over information or access."},
+    {"id": "social_eng_urgency", "concept": "social_engineering", "kind": "rule_of_thumb", "source": "cisa_phishing", "text": "Pressure to act right away is a warning sign: a short deadline or a threat leaves no time to check whether a message is real."},
+    {"id": "impersonation_def", "concept": "impersonation", "kind": "definition", "source": "ftc_phishing", "text": "Scammers impersonate companies you know, such as your carrier, bank or a delivery service, copying their names and the tone of real alerts."},
+    {"id": "impersonation_name", "concept": "impersonation", "kind": "rule_of_thumb", "source": "ftc_phishing", "text": "A company name in a text can be faked, so the name alone does not prove who sent the message."},
+    {"id": "credential_def", "concept": "credential_theft", "kind": "definition", "source": "cisa_social", "text": "Credential theft means tricking someone into giving away login details such as a password, PIN or one-time code, so the thief can sign in as them."},
+    {"id": "credential_sim_swap", "concept": "credential_theft", "kind": "rule_of_thumb", "source": "fcc_sim_swap", "text": "With someone's carrier account details, a thief can try to move their phone number to a SIM the thief controls (SIM swap or port-out fraud) and then receive their text-message codes."},
+    {"id": "links_fake_page", "concept": "suspicious_links", "kind": "rule_of_thumb", "source": "ftc_spam_texts", "text": "A link in an unexpected text can open a fake page that collects whatever you type, or install malware."},
+    {"id": "links_lookalike", "concept": "suspicious_links", "kind": "rule_of_thumb", "source": "cisa_phishing", "text": "Look-alike addresses mix a familiar name with words like verify, secure or login; the safe habit is to skip the link and open the official app or a website you type yourself."},
+    {"id": "verify_independently", "concept": "account_verification", "kind": "rule_of_thumb", "source": "ftc_spam_texts", "text": "To check an alert, contact the company using a phone number or website you know is real, such as its official app or the number on your bill, not the contact details in the message."},
+    {"id": "verify_report_7726", "concept": "account_verification", "kind": "rule_of_thumb", "source": "ftc_spam_texts", "text": "Forwarding a scam text to 7726 (SPAM) reports it to your wireless provider so it can block similar messages; then delete it."},
+    {"id": "protect_dont_reply", "concept": "protective_actions", "kind": "rule_of_thumb", "source": "ftc_spam_texts", "text": "Don't reply to an unexpected text or tap its links; report it and delete it instead."},
+    {"id": "protect_password", "concept": "protective_actions", "kind": "rule_of_thumb", "source": "cisa_social", "text": "If you gave a password away, change it right away, along with any account that reused it, and turn on multi-factor authentication."},
+    {"id": "protect_number", "concept": "protective_actions", "kind": "rule_of_thumb", "source": "ftc_scammed", "text": "If a scammer may control your phone number, contact your carrier from its official number and change your account password; ask about protections against SIM swaps and port-outs."},
+    {"id": "protect_report", "concept": "protective_actions", "kind": "rule_of_thumb", "source": "ftc_scammed", "text": "Report scams at ReportFraud.ftc.gov; if ID numbers such as a Social Security number were taken, IdentityTheft.gov gives a recovery plan."}
   ],
 
   "misconceptions": [
@@ -217,7 +268,12 @@
      "wrong": "A voltage divider is a good way to power a device from a lower voltage.",
      "correction": "A load on a divider's output draws current and pulls the voltage down, and R1 wastes power as heat; use a regulator to power things.",
      "trigger": "\\bdivider\\b[^?.]*\\b(power|run|drive|supply)\\b|\\b(power|run)\\b[^?.]*\\bdivider\\b",
-     "claim": "\\bdivider\\b[^.]*\\b(can|could|will|is a good way to) (power|run|supply)\\b"}
+     "claim": "\\bdivider\\b[^.]*\\b(can|could|will|is a good way to) (power|run|supply)\\b"},
+    {"id": "https_means_safe", "concept": "suspicious_links", "wrong": "A link that starts with https or shows a padlock is safe.", "correction": "https only means the connection is encrypted; scam sites use it too. Skip the link and open the official app yourself.", "trigger": "\\b(https|padlock|lock icon)\\b", "claim": "\\b(https|padlock|lock icon)\\b[^.]*\\b(means|proves|shows|guarantees)\\b[^.]*\\b(safe|legit\\w*|real|genuine|trustworthy)\\b"},
+    {"id": "name_means_real", "concept": "impersonation", "wrong": "If a text uses your carrier's name or your name, it must be real.", "correction": "Names are easy to copy. Check the alert through the official app or the number on your bill.", "trigger": "\\b(knows?|knew|uses?|used|has|had) my (name|number|account)\\b|\\bsays it'?s from\\b|\\bfrom my carrier\\b", "claim": "\\b(uses?|knows?|has|shows?) (your|the carrier'?s|a company'?s) (name|number|logo)\\b[^.]*\\b(so|means|must be|proves)\\b[^.]*\\b(real|legit\\w*|genuine|safe)\\b"},
+    {"id": "scams_have_typos", "concept": "smishing", "wrong": "Scam texts are easy to spot because they are full of typos.", "correction": "Many scam texts are well written and copy real alerts; judge a text by what it asks you to do, not its spelling.", "trigger": "\\b(typos?|spelling|grammar|misspell\\w*)\\b", "claim": "\\bscam\\w* (texts? |messages? )?(always|usually) (have|has|contain|include) (typos|spelling mistakes|bad grammar)\\b"},
+    {"id": "reply_stop_safe", "concept": "protective_actions", "wrong": "Replying STOP to a scam text is a safe way to make it stop.", "correction": "Any reply tells the scammer your number is active; report the text to 7726 (SPAM) and delete it instead.", "trigger": "\\breply(ing)? (with )?stop\\b|\\btext(ing)? (back )?stop\\b|\\bunsubscribe\\b", "claim": "\\breply(ing)? (with )?[\\\"']?stop[\\\"']?\\b[^.]*\\b(is )?(safe|fine|stops? (it|them|the texts))\\b"},
+    {"id": "carrier_asks_password", "concept": "credential_theft", "wrong": "Your carrier may text you a link that asks for your password or PIN to verify your account.", "correction": "Treat any text link that asks for a password or PIN as a scam; check your account in the official app or call the number on your bill.", "trigger": "\\b(would|does|do|will|can|might) (my |the |a )?(carrier|bank|company)\\b[^?]*\\b(ask|text|send)\\b", "claim": "\\b(carrier|bank)s? (may|might|will|can|often|sometimes|could) (text|ask|send)[^.]*\\b(password|pin)\\b"}
   ],
 
   "checks": [
@@ -230,7 +286,9 @@
     {"id": "verify.misconceptions", "kind": "text_check", "description": "explanations that state a known misconception are rejected (pattern match, not a proof of correctness)"},
     {"id": "verify.circuit_readback", "kind": "readback", "description": "Blender's read-back of the LED circuit must match the calculation (director/circuit/check.py)"},
     {"id": "verify.lesson_spec", "kind": "spec_lint", "description": "lesson spec: real pins, closed loops, LED series resistor, no bare numbers (director/lesson/spec.py)"},
-    {"id": "verify.lesson_build", "kind": "readback", "description": "built lesson: parts, pins within 2 cm, flows with the calculated current, labels (director/lesson/verify.py)"}
+    {"id": "verify.lesson_build", "kind": "readback", "description": "built lesson: parts, pins within 2 cm, flows with the calculated current, labels (director/lesson/verify.py)"},
+    {"id": "scam.detect", "kind": "detector", "description": "HEURISTIC PROTOTYPE keyword rules (director/scam/detector.py): warning signs + coarse category, no calibrated probability"},
+    {"id": "verify.scam_readback", "kind": "readback", "description": "Blender's read-back of the Spot the Scam scene: message unchanged, tags = detected signs, chosen outcome shown (director/scam/check.py)"}
   ],
 
   "concept_checks": {
@@ -247,7 +305,14 @@
     "transistor": ["calc.transistor_switch", "verify.lesson_build"],
     "bjt": ["calc.transistor_switch", "verify.lesson_build"],
     "mosfet": ["calc.transistor_switch", "verify.lesson_build", "verify.misconceptions"],
-    "voltage_divider": ["calc.voltage_divider", "verify.lesson_build", "verify.misconceptions"]
+    "voltage_divider": ["calc.voltage_divider", "verify.lesson_build", "verify.misconceptions"],
+    "smishing": ["scam.detect", "verify.scam_readback", "verify.misconceptions"],
+    "social_engineering": ["scam.detect"],
+    "impersonation": ["scam.detect", "verify.misconceptions"],
+    "credential_theft": ["scam.detect", "verify.misconceptions"],
+    "suspicious_links": ["scam.detect", "verify.misconceptions"],
+    "account_verification": ["verify.scam_readback"],
+    "protective_actions": ["verify.scam_readback", "verify.misconceptions"]
   },
 
   "templates": [
@@ -263,6 +328,7 @@
      "main_concept": "voltage_divider", "concepts": ["voltage_divider", "series_circuits", "voltage"]},
     {"id": "bjt_mosfet_lesson", "kind": "lesson", "tool": "teach_topic", "calculator": "calc.transistor_switch", "spec": "BJT_MOSFET_SPEC",
      "title": "BJT vs MOSFET as an LED switch", "question": "Why would someone use a BJT over a MOSFET?",
-     "main_concept": "transistor", "concepts": ["transistor", "bjt", "mosfet", "led"]}
+     "main_concept": "transistor", "concepts": ["transistor", "bjt", "mosfet", "led"]},
+    {"id": "spot_the_scam", "kind": "interactive", "tool": "teach_scam_texts", "calculator": "scam.detect", "title": "Spot the Scam (fictional text message, two hypothetical outcomes)", "question": "How do I recognize scam texts?", "main_concept": "smishing", "concepts": ["smishing", "social_engineering", "impersonation", "credential_theft", "suspicious_links", "account_verification", "protective_actions"]}
   ]
 }

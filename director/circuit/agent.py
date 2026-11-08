@@ -56,10 +56,23 @@ TOOLS = {
                        "Use it for concepts with no 3D demo (the <knowledge> block says so, e.g. parallel circuits) "
                        "or a general 'what is X?' that is not about the circuit on screen. args: {\"concept\": "
                        "a concept id from <knowledge>}",
-    "clarify": "The request is not about electronics, or is unsafe or impossible to show (mains wiring, PCB layout, "
-               "...). args: {\"message\": short reply saying what IS possible: this lesson's resistor, questions "
-               "about the circuit, or a new electronics topic}",
+    "teach_scam_texts": "Start the cybersecurity lesson 'Spot the Scam': learning to recognize scam / phishing text "
+                        "messages (smishing). Shows a phone with ONE fictional suspicious text and asks the learner "
+                        "what they would do. args: {}",
+    "scam_inspect": "Spot the Scam on screen: show and explain the warning signs in the message ('what makes that "
+                    "message suspicious?', 'what are the red flags?', 'how can I tell?'). A heuristic checker finds "
+                    "the signs; you only choose this tool. args: {}",
+    "scam_choose": "Spot the Scam on screen: the learner picks (or asks about) what to do with the text. Shows BOTH "
+                   "hypothetical outcomes side by side, their choice marked. 'I'd click it', 'what if I follow the "
+                   "link?' -> {\"choice\": \"follow_link\"}; 'I'd check the official app', 'verify it', 'what "
+                   "should I do instead?', 'what's the safe thing to do?' -> {\"choice\": \"verify_official\"}",
+    "scam_recover": "Spot the Scam: the learner already tapped the link or gave details away ('what if I already "
+                    "typed my password?', 'I entered my PIN, now what?'): the recovery steps. args: {}",
+    "clarify": "The request is not about electronics or the Spot the Scam lesson, or is unsafe or impossible to show "
+               "(mains wiring, PCB layout, ...). args: {\"message\": short reply saying what IS possible: this "
+               "lesson's resistor, questions about the circuit, a new electronics topic, or spotting scam texts}",
 }
+SCAM_TOOLS = ("teach_scam_texts", "scam_inspect", "scam_choose", "scam_recover")
 
 TOOL_SCHEMA = {
     "type": "object",
@@ -95,6 +108,11 @@ TOOL_SCHEMA = {
                                           "maxProperties": 1,
                                           "properties": {"resistance_ohm": {"type": "number"},
                                                          "direction": {"enum": ["increase", "decrease"]}}}}}},
+        {"if": {"properties": {"tool": {"enum": ["teach_scam_texts", "scam_inspect", "scam_recover"]}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "maxProperties": 0}}}},
+        {"if": {"properties": {"tool": {"const": "scam_choose"}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["choice"],
+                                          "properties": {"choice": {"enum": ["follow_link", "verify_official"]}}}}}},
         {"if": {"properties": {"tool": {"const": "end_comparison"}}},
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "maxProperties": 0}}}},
         {"if": {"properties": {"tool": {"const": "explain"}}},
@@ -114,9 +132,10 @@ TOOL_SCHEMA = {
 }
 _TOOL_VALIDATOR = Draft202012Validator(TOOL_SCHEMA)
 
-TOOL_PROMPT = """TOOL_SELECTOR. You are the director of an interactive 3D electronics lesson in Blender:
-"Why does an LED need a resistor?" The circuit is fixed: a 9 V battery -> one resistor -> one red LED -> back to
-the battery. You do NOT calculate anything; a calculation module does that after you choose a tool.
+TOOL_PROMPT = """TOOL_SELECTOR. You are the director of interactive 3D lessons in Blender. The main lesson is
+electronics: "Why does an LED need a resistor?" The circuit is fixed: a 9 V battery -> one resistor -> one red LED ->
+back to the battery. You do NOT calculate anything; a calculation module does that after you choose a tool.
+There is also ONE cybersecurity lesson, "Spot the Scam" (recognizing scam text messages), with its own tools.
 
 Choose exactly ONE tool for the user's latest message and output ONE JSON object, nothing else (no prose, no
 markdown): {{"tool": "<name>", "args": {{...}}, "reason": "<one short sentence>"}}
@@ -145,6 +164,12 @@ Rules:
 - <knowledge> lists the concepts the tutor's knowledge base matched and which demo exists for them. A concept
   with no 3D demo (explanation only) -> explain_concept with its id; never invent a demo for it. Questions about
   the circuit already on screen still use explain / set_resistance.
+- Scam texts, phishing, smishing, suspicious messages or links -> the Spot the Scam tools: start it with
+  teach_scam_texts. When <circuit_state> says the Spot the Scam phone is on screen: warning signs / red flags /
+  "what makes it suspicious?" -> scam_inspect; the learner's decision or "what if I follow the link?" /
+  "what should I do instead?" -> scam_choose; "I already typed / clicked / gave ..." -> scam_recover; "go back",
+  "back to the message" while the outcomes are shown -> end_comparison; other questions about it -> explain.
+  Never use teach_topic for scams (it builds electronics circuits only).
 """
 
 EXPLAIN_PROMPT = """EXPLAINER. You are a friendly electronics tutor for complete beginners. The 3D scene has just
@@ -374,14 +399,17 @@ correct a misconception the learner shows. It is NOT a source of numbers: use a 
 
 
 def explain(facts: dict, client: ModelClient, trace: Trace, knowledge: str = "", claim_check=None,
-            shape_check=None) -> Explanation:
+            shape_check=None, prompt: str | None = None, template: str | None = None) -> Explanation:
     """`knowledge`: prompt block from the knowledge base (system prompt; never part of the number check).
     `claim_check(text) -> [problems]`: rejects text that states a known misconception (1 retry, then template).
     `shape_check(text) -> problem | None`: rejects text with the wrong structure (e.g. a tour needs one sentence per
-    stop so the camera can follow it); same 1 retry, then template."""
-    system = EXPLAIN_PROMPT + (KNOWLEDGE_NOTE + "KNOWLEDGE:\n" + knowledge if knowledge else "")
+    stop so the camera can follow it); same 1 retry, then template.
+    `prompt`: a different EXPLAINER system prompt (the Spot the Scam lesson); the checks stay the same.
+    `template`: the deterministic fallback text (default: template_explanation(facts))."""
+    system = (prompt or EXPLAIN_PROMPT) + (KNOWLEDGE_NOTE + "KNOWLEDGE:\n" + knowledge if knowledge else "")
     messages = [{"role": "system", "content": system},
-                {"role": "user", "content": "FACTS (from the calculation module):\n"
+                {"role": "user", "content": ("FACTS (from the lesson's modules):\n" if prompt else
+                                             "FACTS (from the calculation module):\n")
                                             + json.dumps(facts, indent=1, ensure_ascii=False)
                                             + "\nWrite the explanation now."}]
     rejected: list[str] = []
@@ -414,4 +442,4 @@ def explain(facts: dict, client: ModelClient, trace: Trace, knowledge: str = "",
                                                                   "in at most 3 short sentences")
                                                                + " using only numbers from FACTS."}]
     trace.add("explain", "using the deterministic template (model text failed the checks twice)")
-    return Explanation(template_explanation(facts), "template", 2, rejected)
+    return Explanation(template or template_explanation(facts), "template", 2, rejected)

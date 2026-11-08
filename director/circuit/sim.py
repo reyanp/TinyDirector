@@ -19,6 +19,9 @@ POSITIONS = {"board_1": [0.1, 0, 0], "battery_1": [-2.75, 0, 0], "resistor_1": [
 DIRECT_TARGETS = ("battery", "resistor", "led", "current", "overview")
 COMPARE_TARGETS = ("compare", "baseline", "alternative")
 WORLD_LABELS = ("label_battery", "label_resistor", "label_led", "label_current")
+SCAM_TARGETS = ("phone", "message", "sender", "brand", "body", "urgency", "link")
+SCAM_OUTCOME_TARGETS = ("outcomes", "outcome_a", "outcome_b")
+SCAM_SIDE_X = {"follow_link": -5.6, "verify_official": 7.2}
 
 
 class SimulatedCircuitExecutor:
@@ -44,6 +47,9 @@ class SimulatedCircuitExecutor:
                 "circuit": copy.deepcopy(self.state["circuit"])}
 
     def _targets(self) -> list[str]:
+        sc = self.state.get("scam")
+        if sc:
+            return ["overview"] + list(SCAM_TARGETS) + (list(SCAM_OUTCOME_TARGETS) if sc["outcomes"]["active"] else [])
         return list(DIRECT_TARGETS) + (list(COMPARE_TARGETS) if self.state.get("compare") else [])
 
     def _direction(self) -> dict:
@@ -74,7 +80,49 @@ class SimulatedCircuitExecutor:
             out["direction"] = self._direction()
         if self.state.get("compare"):
             out["compare"] = self._compare()
+        if self.state.get("scam"):
+            out["scam"] = copy.deepcopy(self.state["scam"])
+            out["direction"] = self._direction()
         return out
+
+    def _scam_request(self, req: dict) -> dict:
+        """SIMULATED Spot the Scam scene (blender_engine/scam.py): records what Blender would draw; draws nothing."""
+        rid = req["request_id"]
+        sc = self.state.get("scam")
+        d = self.state.setdefault("direction", {"focus": None, "caption": None})
+        a = req["action"]
+        if a != "build" and not sc:
+            return {**self._result(rid, "error", 0, ["no Spot the Scam phone on stage; build it first"]),
+                    "scam": {"present": False}}
+        if a == "build":
+            m = req["message"]
+            self.state.update(circuit=None, compare=None)
+            self.state.pop("compare", None)
+            sc = {"present": True, "scenario": req["scenario"], "title": req["title"], "banner": req["banner"],
+                  "sender": m["sender"], "segments": {s["id"]: s["text"] for s in m["segments"]}, "tags": {},
+                  "highlight": None, "objects": [{"id": i, "uid": secrets.token_hex(4)} for i in
+                                                 ("phone_1", "sender", *[s["id"] for s in m["segments"]],
+                                                  "hud_title", "hud_banner", "hud_caption", "hud_legend")],
+                  "outcomes": {"active": False}}
+            self.state["direction"] = {"focus": None, "caption": None}
+        elif a == "mark":
+            sc["tags"] = dict(req["tags"])
+        elif a == "outcomes":
+            o = req["outcomes"]
+            side = {}
+            for choice, x in SCAM_SIDE_X.items():
+                texts = [v if isinstance(v, str) else " ".join(v) for v in o[choice].values()]
+                side[choice] = {"present": True, "texts": sorted(t.replace("\n", " ") for t in texts), "center_x": x}
+            sc["outcomes"] = {"active": True, "choice": req["choice"], "marked": [req["choice"]],
+                              "headlines": {k: o[k]["headline"] for k in o}, **side}
+            d.update(focus="outcomes", callout=None)
+        else:
+            sc["outcomes"] = {"active": False}
+            d.update(focus="overview", callout=None)
+        self.state["scam"] = sc
+        self.state["scene_version"] += 1
+        self._save()
+        return {**self._result(rid, "ok", 1), "scam": copy.deepcopy(sc), "direction": self._direction()}
 
     def _compare_request(self, req: dict) -> dict:
         """SIMULATED split-reality comparison (blender_engine/compare.py): records the what-if copy; draws nothing."""
@@ -100,7 +148,7 @@ class SimulatedCircuitExecutor:
     def _direct(self, req: dict) -> dict:
         """SIMULATED stage direction (blender_engine/direction.py): records focus + caption, moves no camera."""
         rid = req["request_id"]
-        if not (self.state["circuit"] or {}).get("present"):
+        if not (self.state["circuit"] or {}).get("present") and not self.state.get("scam"):
             return self._result(rid, "error", 0, ["nothing on stage to direct"])
         focus = req.get("focus")
         if focus is not None and focus not in self._targets():
@@ -120,11 +168,15 @@ class SimulatedCircuitExecutor:
             return self._direct(req)
         if req.get("kind") == "compare":
             return self._compare_request(req)
+        if req.get("kind") == "scam":
+            return self._scam_request(req)
         rid = req["request_id"]
         circ = self.state["circuit"]
         if req["action"] == "update" and not (circ and circ.get("present")):
             return self._result(rid, "error", 0, ["no lesson circuit in the scene to update; build it first"])
         self.state.pop("compare", None)  # like the worker: a circuit request ends a comparison first
+        if req["action"] == "build":
+            self.state.pop("scam", None)  # like Blender: building the circuit clears the Spot the Scam phone
         if req["action"] == "build":
             self.state["direction"] = {"focus": None, "caption": None}
         if req["action"] == "build" or circ is None:

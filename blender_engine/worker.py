@@ -59,7 +59,7 @@ if str(ROOT) not in sys.path:
 
 import bpy  # noqa: E402
 
-from blender_engine import circuit, compare, direction, engine, lesson_loader, snapshot  # noqa: E402
+from blender_engine import circuit, compare, direction, engine, lesson_loader, scam, snapshot  # noqa: E402
 
 SNAPSHOTS = os.environ.get("TD_SNAPSHOT", "1") != "0"
 DIRECT_SNAPSHOTS = os.environ.get("TD_DIRECT_SNAPSHOT", "0") == "1"  # e2e evidence: render camera moves too
@@ -110,6 +110,9 @@ def _inspect(rid: str) -> dict:
         result["direction"] = direction.read_back()
     if compare.active():
         result["compare"] = compare.read_back()
+    if scam.present():
+        result["scam"] = scam.read_back()
+        result["direction"] = direction.read_back()
     return result
 
 
@@ -214,6 +217,11 @@ def process_inbox() -> int:
                 continue
             if isinstance(plan, dict) and plan.get("kind") == "direct":
                 result = direction.make_result(rid, plan)  # display only: applied = 0, no snapshot
+            elif isinstance(plan, dict) and plan.get("kind") == "scam":
+                if plan.get("action") == "build":  # one lesson on screen at a time
+                    compare.clear(move_camera=False)
+                    lesson_loader.clear()
+                result = scam.make_result(rid, plan)  # Spot the Scam phone, warning tags, hypothetical outcomes
             elif isinstance(plan, dict) and plan.get("kind") == "compare":
                 result = compare.make_result(rid, plan)  # split-reality comparison (show / clear)
             elif isinstance(plan, dict) and plan.get("kind") == "circuit":
@@ -240,7 +248,7 @@ def process_inbox() -> int:
             # render BEFORE writing the result so the image exists when the director sees the JSON
             try:
                 t0 = time.perf_counter()
-                if result.get("circuit_action") or "compare" in result or is_direct:  # camera + EEVEE, powered on
+                if result.get("circuit_action") or "compare" in result or "scam" in result or is_direct:  # camera + EEVEE, powered on
                     circuit.render_preview(OUTBOX / f"{rid}.jpg", 960, 540, samples=16, file_format="JPEG")
                 elif result.get("lesson_action"):
                     circuit.render_preview(OUTBOX / f"{rid}.jpg", 960, 540, frame=bpy.context.scene.frame_end,
@@ -255,6 +263,9 @@ def process_inbox() -> int:
         _write_json(STATE / "blender_manifest.json", result)
         if (result.get("circuit_action") or result.get("lesson_action")) and result.get("applied"):
             _present_circuit(result.get("circuit_action") or "build")
+        elif isinstance(plan, dict) and plan.get("kind") == "scam" and plan.get("action") == "build" \
+                and result.get("applied"):
+            _present_circuit("build")
         save = _save_path()
         if save and result.get("applied"):
             try:

@@ -46,7 +46,7 @@ CREATE TABLE relations (
   dst TEXT NOT NULL REFERENCES concepts(id), note TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (src, rel, dst), CHECK (src <> dst));
 CREATE TABLE checks (
-  id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('calculator', 'text_check', 'readback', 'spec_lint')),
+  id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK (kind IN ('calculator', 'detector', 'text_check', 'readback', 'spec_lint')),
   description TEXT NOT NULL);
 CREATE TABLE concept_checks (
   concept_id TEXT NOT NULL REFERENCES concepts(id), check_id TEXT NOT NULL REFERENCES checks(id),
@@ -73,7 +73,9 @@ CREATE VIRTUAL TABLE search USING fts5(kind UNINDEXED, ref UNINDEXED, concept_id
 """
 
 FACT_KIND_ORDER = ["definition", "law", "worked_example", "rule_of_thumb", "typical_value", "model_assumption"]
-TEMPLATE_TOOLS = {"interactive": {"teach_led_resistor"}, "lesson": {"teach_topic"}}
+TEMPLATE_TOOLS = {"interactive": {"teach_led_resistor", "teach_scam_texts"}, "lesson": {"teach_topic"}}
+# what a demo is driven by: a calculator (numbers) or, for the scam lesson, the heuristic detector
+DEMO_CHECK_KINDS = ("calculator", "detector")
 
 
 class KnowledgeError(ValueError):
@@ -168,8 +170,8 @@ def _validate(seed: dict) -> list[str]:
     for t in seed["templates"]:
         if t["tool"] not in TEMPLATE_TOOLS.get(t["kind"], ()):
             errs.append(f"template {t['id']}: tool {t['tool']!r} does not fit kind {t['kind']!r}")
-        if checks.get(t["calculator"], {}).get("kind") != "calculator":
-            errs.append(f"template {t['id']}: a demo needs a working calculator, got {t['calculator']!r}")
+        if checks.get(t["calculator"], {}).get("kind") not in DEMO_CHECK_KINDS:
+            errs.append(f"template {t['id']}: a demo needs a working calculator or detector, got {t['calculator']!r}")
         errs += [f"template {t['id']}: unknown concept {c!r}" for c in t["concepts"] + [t["main_concept"]]
                  if c not in concepts]
         if t["kind"] == "lesson":

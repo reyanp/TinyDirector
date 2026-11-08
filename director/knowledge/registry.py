@@ -15,11 +15,13 @@ CHECKS: dict[str, tuple[str, str]] = {
     "calc.voltage_divider": ("director.lesson.calculators", "voltage_divider"),
     "calc.transistor_switch": ("director.lesson.calculators", "transistor_switch"),
     "circuit.solve": ("director.circuit.model", "solve"),
+    "scam.detect": ("director.scam.detector", "detect"),  # HEURISTIC PROTOTYPE, not a trained classifier
     "verify.explanation_numbers": ("director.circuit.agent", "number_check"),
     "verify.misconceptions": ("director.knowledge.claims", "find_wrong_claims"),
     "verify.circuit_readback": ("director.circuit.check", "run"),
     "verify.lesson_spec": ("director.lesson.spec", "validate"),
     "verify.lesson_build": ("director.lesson.verify", "structural"),
+    "verify.scam_readback": ("director.scam.check", "run"),
 }
 
 

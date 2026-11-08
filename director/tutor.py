@@ -30,12 +30,13 @@ from jsonschema import Draft202012Validator
 from . import bridge, paths
 from .circuit import check
 from .events import noop
-from .circuit.agent import ToolError, _tokens, choose_tool, describe_state, explain, facts_for
+from .circuit.agent import SCAM_TOOLS, ToolError, _tokens, choose_tool, describe_state, explain, facts_for
 from .circuit.display import (circuit_request, compare_clear_request, compare_request, equation_text, title_for,
                               wrap_caption)
 from .circuit.model import (CircuitModelError, LedCircuit, check_resistance, format_ma, format_ohms, format_volts,
                             solve, step_resistance)
 from . import stage
+from .scam import lesson as scam_lesson
 from .nemotron_client import ConfigError, ModelCallError, NemotronClient
 from .planner import new_request_id
 from .trace import Trace
@@ -147,7 +148,8 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
     lesson_on_stage = (before.get("lesson") or {}).get("title") or (
         (context.get("topic") or {}).get("title") if before.get("lesson") else None)
     comparing = before.get("compare") if (before.get("compare") or {}).get("active") and current is not None else None
-    scene_text = describe_state(current, lesson_on_stage, focus, comparing)
+    scam_sc = scam_lesson.on_stage(before)  # the Spot the Scam phone (director/scam/lesson.py)
+    scene_text = scam_lesson.describe(scam_sc) if scam_sc else describe_state(current, lesson_on_stage, focus, comparing)
     trace.add("read_world", f"{_executor_name(before)}: {scene_text}")
     emit("scene", "ok", "Scene read", f"{_executor_name(before)}: {scene_text}",
          executor=_executor_name(before), simulated=before.get("executor") == "simulated")
@@ -180,6 +182,11 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
         emit("turn", "ok", "Answered", "", reply=call.args["message"], source="nemotron" if call.live else "mock",
              scene_changed=False)
         return 0
+    if call.tool in SCAM_TOOLS or scam_sc:
+        code = scam_lesson.run(call, text, client, executor, before, kb, kn, trace, emit, context, follow_up_text,
+                               show_trace)
+        if code is not None:
+            return code
     if call.tool == "teach_topic":
         return teach_topic(call.args["question"], client, executor, trace, show_trace, emit=emit, context=context,
                            kb=kb, kn=kn)
@@ -433,15 +440,19 @@ def _send(executor, req: dict, emit, timeout: float | None = None) -> tuple[dict
         return None, _fail(emit, "apply", f"Bridge error: {exc}", 5)
 
 
-def _explained(facts: dict, client, kb, kn, trace: Trace, emit, detail: str, shape_check=None):
+def _explained(facts: dict, client, kb, kn, trace: Trace, emit, detail: str, shape_check=None, prompt=None,
+               claim_check=None, template: str | None = None):
     emit("explain", "start", "Writing the explanation", detail)
+    kb_check = _claim_check(kb)
+    checks = [c for c in (kb_check, claim_check) if c]
     try:
-        expl = explain(facts, client, trace, knowledge=kn.prompt_block() if kn else "", claim_check=_claim_check(kb),
-                       shape_check=shape_check)
+        expl = explain(facts, client, trace, knowledge=kn.prompt_block() if kn else "",
+                       claim_check=(lambda t: [w for c in checks for w in c(t)]) if checks else None,
+                       shape_check=shape_check, prompt=prompt, template=template)
     except ModelCallError as exc:
         from .circuit.agent import Explanation, template_explanation
         trace.add("explain", f"model call failed ({exc}); using the deterministic template")
-        expl = Explanation(template_explanation(facts), "template")
+        expl = Explanation(template or template_explanation(facts), "template")
     emit("explain", "ok", {"nemotron": "Explanation ready (numbers verified)", "mock": "MOCK explanation ready",
                            "template": "Template explanation (model text failed the checks)"}[expl.source],
          "", source=expl.source, attempts=expl.attempts)

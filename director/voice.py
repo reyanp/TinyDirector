@@ -21,7 +21,8 @@ from .nemotron_client import ConfigError, ModelCallError
 
 STT_PROMPT = ("A student talks to Poyo, an electronics tutor, about circuits: Poyo, LED, LEDs, resistor, resistance, "
               "ohms, kilohms, 1,000 ohms, milliamps, volts, current, battery, forward voltage, MOSFET, BJT, "
-              "transistor, voltage divider, dimmer, brighter.")
+              "transistor, voltage divider, dimmer, brighter. Also scam texts: scam, smishing, phishing, "
+              "suspicious message, link, carrier, official app, verify, password, PIN.")
 TTS_INSTRUCTIONS = ("You are Poyo, a small, warm, upbeat tutor robot. Speak clearly at a relaxed pace, like a "
                     "friendly teacher to a curious beginner. Say units in full (mA as milliamps, Ω as ohms).")
 WAKE_RE = re.compile(r"^\s*(?:hey\s+|hi\s+|okay\s+|ok\s+)?(?:poyo|poyo's|poio|poyho|pollo|po-yo|boyo|poyou)\b[\s,.!:;-]*",

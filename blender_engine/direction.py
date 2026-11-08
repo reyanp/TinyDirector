@@ -144,10 +144,17 @@ def targets() -> list[str]:
     if _compare_active():
         out += list(COMPARE_TARGETS)
     out += sorted({o["lesson_id"] for o in bpy.data.objects if o.get("lesson_kind") == "part" and o.get("lesson_id")})
-    return out
+    return out + _scam().targets()
+
+
+def _scam():
+    from blender_engine import scam
+    return scam
 
 
 def _objects_for(target: str) -> list:
+    if target in _scam().targets():  # the Spot the Scam phone (and its hypothetical outcomes)
+        return _scam().objects_for(target)
     if target in COMPARE_TARGETS:
         if not _compare_active():
             return []
@@ -253,12 +260,17 @@ def _add_halo(target: str, lo: Vector, hi: Vector):
 
 # ---------------- caption ----------------
 
+def _caption_obj():
+    return next(iter(_circuit_objects(["label_caption"])), None) or _scam().caption_obj()
+
+
 def _set_caption(text: str) -> bool:
-    lab = next(iter(_circuit_objects(["label_caption"])), None)
+    lab = _caption_obj()
     if lab is None or lab.type != "FONT":
         return False
     from blender_engine.circuit import _fit_plate
     lab.data.body = text
+    bpy.context.view_layer.update()  # the text's bound box is stale until the depsgraph re-evaluates it
     _fit_plate(lab)
     return True
 
@@ -415,8 +427,11 @@ def apply(req: dict) -> list[str]:
         if cam is None:
             return ["no lesson camera in the scene"]
         _flow_emphasis(focus == "current")
-        if focus == "overview" and _compare_active():
-            focus_box = _bbox(_objects_for("compare"))
+        scam_t = _scam().targets()
+        if scam_t:  # glowing outline on the message part being discussed (none for overview / outcomes)
+            _scam().highlight(focus)
+        if focus == "overview" and (_compare_active() or "outcomes" in scam_t):
+            focus_box = _bbox(_objects_for("compare" if _compare_active() else "outcomes"))
             _remove_halo()
             _move(cam, _framing(cam, *focus_box, WIDE_X, WIDE_Y), float(req.get("transition_s", 0.9)), None, pop)
         elif focus == "overview":
@@ -428,12 +443,13 @@ def apply(req: dict) -> list[str]:
             if box is None:
                 return [f"nothing to focus on: {focus!r} is not in the scene (targets: {', '.join(targets())})"]
             halo = None
-            if req.get("highlight", True) and (focus in HALO or (focus not in CIRCUIT_TARGETS and focus not in COMPARE_TARGETS)):
+            if req.get("highlight", True) and focus not in scam_t and (
+                    focus in HALO or (focus not in CIRCUIT_TARGETS and focus not in COMPARE_TARGETS)):
                 part = _circuit_objects([HALO_PART[focus]]) if focus in HALO_PART else objs
                 halo = _add_halo(focus, *(_bbox(part) or box))
             else:
                 _remove_halo()
-            if focus in COMPARE_TARGETS:
+            if focus in COMPARE_TARGETS or focus in _scam().WIDE:
                 frame = _framing(cam, *box, WIDE_X, WIDE_Y)
             else:
                 lo, hi = box
@@ -453,7 +469,7 @@ def read_back() -> dict:
     halo = bpy.data.objects.get("TD_Halo")
     target = _TWEEN.get("to")
     loc = target[0] if target else (cam.matrix_world.translation if cam else None)
-    cap = next(iter(_circuit_objects(["label_caption"])), None)
+    cap = _caption_obj()
     return {"focus": sc.get(FOCUS_KEY), "camera": [round(v, 3) for v in loc] if loc is not None else None,
             "moving": bool(_TWEEN), "halo": halo.get("td_halo_target") if halo else None,
             "caption": cap.data.body if cap is not None and cap.type == "FONT" else None, "targets": targets(),

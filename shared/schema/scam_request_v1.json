@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinydirector.local/schema/scam_request_v1.json",
+  "title": "TinyDirector 'Spot the Scam' request v1 (ADDITIVE: does not change any other schema)",
+  "description": "Written by the director to shared/inbox/<request_id>.json. build: a phone showing a FICTIONAL suspicious text (strings from director/scam/scenario.py). mark: warning-sign tags from the heuristic detector next to the message parts. outcomes: two hypothetical outcomes beside the untouched message phone (the What-If Lab pattern), the learner's choice marked. clear_outcomes: remove them. Display only: nothing is opened, sent or collected. The worker answers with a scene_result_v1 document plus 'scam' and 'direction' read-back blocks (blender_engine/scam.py).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schema_version",
+    "request_id",
+    "action"
+  ],
+  "properties": {
+    "kind": {
+      "const": "scam"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_\\-]{1,80}$"
+    },
+    "action": {
+      "enum": [
+        "build",
+        "mark",
+        "outcomes",
+        "clear_outcomes"
+      ]
+    },
+    "scenario": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "banner": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "legend": {
+      "type": "string",
+      "maxLength": 240
+    },
+    "message": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sender",
+        "sender_note",
+        "time",
+        "segments"
+      ],
+      "properties": {
+        "sender": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "sender_note": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "time": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "segments": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "text"
+            ],
+            "properties": {
+              "id": {
+                "enum": [
+                  "brand",
+                  "body",
+                  "urgency",
+                  "link"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              }
+            }
+          }
+        }
+      }
+    },
+    "tags": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sender": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "brand": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "urgency": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "link": {
+          "type": "string",
+          "maxLength": 40
+        }
+      }
+    },
+    "choice": {
+      "enum": [
+        "follow_link",
+        "verify_official"
+      ]
+    },
+    "outcomes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "follow_link",
+        "verify_official"
+      ],
+      "properties": {
+        "follow_link": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "maxItems": 6
+              }
+            ]
+          }
+        },
+        "verify_official": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 40
+                },
+                "maxItems": 6
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "build"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "scenario",
+          "title",
+          "banner",
+          "legend",
+          "message"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "mark"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "tags"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "outcomes"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "choice",
+          "title",
+          "legend",
+          "outcomes"
+        ]
+      }
+    }
+  ]
+}

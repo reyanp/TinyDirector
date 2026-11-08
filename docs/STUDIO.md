@@ -66,6 +66,7 @@ OpenAI key the drawer's Type tab still works, and the browser's own `speechSynth
 | "Go back to the original." | `end_comparison` | the copy is removed; the original is checked to be exactly as before |
 | a new topic (BJT vs MOSFET, voltage divider) | `teach_topic` | the multi-agent lesson pipeline |
 | parallel circuits | `explain_concept` | nothing; explanation only (no demo yet) |
+| "Teach me how to recognize scam texts." | `teach_scam_texts` | a phone with a FICTIONAL text (`scam_request_v1`); then `scam_inspect` / `scam_choose` / `scam_recover` ([SCAM_LESSON.md](SCAM_LESSON.md)) |
 | off-topic | `clarify` | nothing |
 
 Build and update requests go to Blender right after the calculation. The subtitle shows the calculated change

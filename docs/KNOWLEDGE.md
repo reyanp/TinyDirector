@@ -21,7 +21,7 @@ python -m director.knowledge graph                       # the knowledge map's n
 | `facts` | short paraphrased facts, each with a `source` and a `status` (see below) |
 | `sources` | OpenStax College Physics 2e, SparkFun tutorials, Lessons in Electric Circuits, and this project's own calculation modules |
 | `misconceptions` | the wrong idea, its correction, a `trigger` regex (does the learner's question show it?) and an optional `claim` regex (does a model explanation state it?) |
-| `templates` | demos that exist: the interactive LED tutor plus 3 reviewed lesson specs (Ohm's law, voltage divider, BJT vs MOSFET; stored as JSON), each tied to a calculator |
+| `templates` | demos that exist: the interactive LED tutor plus 3 reviewed lesson specs (Ohm's law, voltage divider, BJT vs MOSFET; stored as JSON), each tied to a calculator; and the interactive Spot the Scam lesson, tied to the `scam.detect` HEURISTIC detector (check kind `detector`, never `calculator`; [SCAM_LESSON.md](SCAM_LESSON.md)) |
 | `checks`, `concept_checks` | ids of the real calculators and verifiers, and which ones apply to each concept |
 | `search` | FTS5 index over concepts, facts and misconceptions |
 

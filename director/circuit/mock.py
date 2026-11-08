@@ -52,6 +52,25 @@ class TutorMockModel:
         low = message.lower()
         ohms = parse_ohms(message)
         no_circuit = state.startswith("No lesson")
+        scam_on = "Spot the Scam lesson is on screen" in state
+        if scam_on:
+            outcomes_on = "hypothetical outcomes are shown" in state
+            if re.search(r"\balready (typed|clicked|tapped|entered|gave|put)\b|\bi (typed|entered|gave)\b", low):
+                return {"tool": "scam_recover", "args": {}, "reason": "details already shared"}
+            if outcomes_on and re.search(r"\b(go back|back to the message|stop comparing)\b", low):
+                return {"tool": "end_comparison", "args": {}, "reason": "back to the message"}
+            if re.search(r"\b(instead|safe thing|official|verify|check (it|the app))\b", low):
+                return {"tool": "scam_choose", "args": {"choice": "verify_official"}, "reason": "the safe choice"}
+            if re.search(r"\b(follow|click|tap|open)\w*\b[^.?]*\blink\b|\bi'?d click\b", low):
+                return {"tool": "scam_choose", "args": {"choice": "follow_link"}, "reason": "follow the link"}
+            if re.search(r"\b(suspicious|red flags?|warning signs?|how (can|do) i tell|what makes)\b", low):
+                return {"tool": "scam_inspect", "args": {}, "reason": "warning signs"}
+        if re.search(r"\b(scam|phishing|smishing|spam text|fraud)\w*", low):
+            if scam_on and "?" in message and "teach" not in low:
+                return {"tool": "explain", "args": {"question": message}, "reason": "question about the message"}
+            return {"tool": "teach_scam_texts", "args": {}, "reason": "Spot the Scam lesson"}
+        if scam_on and "teach" not in low and ("?" in message or re.search(r"\b(why|what|how|explain)\b", low)):
+            return {"tool": "explain", "args": {"question": message}, "reason": "question about the message"}
         if any(w in low for w in ("bjt", "mosfet", "transistor", "divider")):
             return {"tool": "teach_topic", "args": {"question": message}, "reason": "new topic"}
         comparing = "comparison is on screen" in state
@@ -90,7 +109,25 @@ class TutorMockModel:
                                                        "questions about the circuit."}, "reason": "unsupported"}
 
     @staticmethod
+    def _scam(f: dict) -> str:
+        """Spot the Scam: rule-based text from the lesson's FACTS (MOCK)."""
+        safe = f.get("safe_steps") or []
+        if "learner_choice" in f:
+            o = f["chosen_outcome"]
+            return f"This is a hypothetical simulation. {o['result']}. " + " ".join(safe[1:3])
+        if "steps_now" in f:
+            return " ".join(f["steps_now"][:3])
+        if "question" in f:
+            return f"This fictional text shows {f['warning_sign_count']} warning signs. {safe[1]}"
+        if "warning_signs" in f:
+            return " ".join(f"{s['where'].capitalize()}: {s['sign'].lower()}." for s in f["warning_signs"]) + \
+                " These signs come from a heuristic checklist, not a certainty."
+        return "This phone shows a fictional text that claims to come from your carrier. Let's look closely first."
+
+    @staticmethod
     def _explain(f: dict) -> str:
+        if "message_on_screen" in f or "learner_choice" in f or "steps_now" in f:
+            return TutorMockModel._scam(f)
         if "now" not in f:
             return " ".join(f.get("key_points", []))
         now = f["now"]

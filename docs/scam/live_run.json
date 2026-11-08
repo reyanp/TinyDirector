@@ -1,0 +1,2138 @@
+[
+ {
+  "step": 1,
+  "text": "Poyo, teach me how to recognize scam texts.",
+  "tool": "teach_scam_texts",
+  "args": {},
+  "reply": "Hi, I am Poyo. The phone shows a fictional text that claims to be from your carrier. Scam texts copy real alerts, so we will look closely before deciding. Would you follow this link, or verify the message through your carrier's official app?",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "Hi, I am Poyo.",
+    "focus": "phone",
+    "caption": "Hi, I am Poyo.",
+    "callout": null
+   },
+   {
+    "text": "The phone shows a fictional text that claims to be from your carrier.",
+    "focus": "brand",
+    "caption": "The phone shows a fictional text that claims to be from your carrier.",
+    "callout": null
+   },
+   {
+    "text": "Scam texts copy real alerts,",
+    "focus": null,
+    "caption": "Scam texts copy real alerts,",
+    "callout": null
+   },
+   {
+    "text": "so we will look closely before deciding.",
+    "focus": null,
+    "caption": "so we will look closely before deciding.",
+    "callout": null
+   },
+   {
+    "text": "Would you follow this link, or verify the message through your carrier's official app?",
+    "focus": "link",
+    "caption": "Would you follow this link, or verify the message through your\ncarrier's official app?",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "phone",
+    "got": "phone",
+    "code": 200
+   },
+   {
+    "want": "brand",
+    "got": "brand",
+    "code": 200
+   },
+   {
+    "want": "link",
+    "got": "link",
+    "code": 200
+   }
+  ],
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Poyo, teach me how to recognize scam texts."
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No lesson circuit in the scene yet."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "1 concept(s), 3 fact(s)",
+    "detail": "Smishing (scam texts)"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: teach_scam_texts",
+    "detail": "The user wants to learn how to recognize scam texts, which starts the Spot the Scam lesson."
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Putting the phone with the fictional text on stage",
+    "detail": "scam_request_v1 build"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: scam build ok",
+    "detail": "scene v1"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 8/8 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "Nemotron introduces the fictional message"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "grounding": {
+   "numbers": "none",
+   "number_check": true,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "smishing",
+     "name": "Smishing (scam texts)",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "smishing_lures",
+     "concept": "smishing",
+     "kind": "rule_of_thumb",
+     "text": "Common scam-text lures are fake fraud or sign-in alerts, package delivery problems, unpaid tolls, and prize or refund offers.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "smishing_def",
+     "concept": "smishing",
+     "kind": "definition",
+     "text": "Smishing is phishing by text message: a text that pretends to come from a company you trust so that you tap a link, reply, or share account or payment details.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "smishing_signs",
+     "concept": "smishing",
+     "kind": "rule_of_thumb",
+     "text": "Warning signs of phishing include urgent or emotional language, requests for personal or financial information, and misspelled or look-alike addresses.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_phishing",
+      "title": "CISA Secure Our World: Recognize and Report Phishing",
+      "url": "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "scams_have_typos"
+   ],
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "lesson": {
+   "kind": "scam",
+   "title": "Spot the Scam",
+   "chips": [
+    "FICTIONAL message",
+    "Heuristic: likely scam · 7 signs"
+   ],
+   "choice": null,
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "seconds": 18.2,
+  "scene_version": [
+   0,
+   1
+  ],
+  "scam": {
+   "present": true,
+   "scenario": "carrier_signin_alert",
+   "title": "Spot the Scam",
+   "banner": "FICTIONAL EXAMPLE · educational simulation · not a real message",
+   "sender": "+1 (469) 555-0142",
+   "segments": {
+    "brand": "CarrierAlert:",
+    "body": "Unusual sign-in detected on your account.",
+    "urgency": "Verify within 24 hrs or your service will be suspended.",
+    "link": "http://carrier-verify-acct.example/login"
+   },
+   "tags": {},
+   "highlight": "link",
+   "objects": [
+    {
+     "id": "body",
+     "uid": "7be006aa"
+    },
+    {
+     "id": "brand",
+     "uid": "4bdea655"
+    },
+    {
+     "id": "frame_body",
+     "uid": "b3db6329"
+    },
+    {
+     "id": "frame_brand",
+     "uid": "e4723fa3"
+    },
+    {
+     "id": "frame_link",
+     "uid": "e6bb2fd1"
+    },
+    {
+     "id": "frame_sender",
+     "uid": "6d17d8db"
+    },
+    {
+     "id": "frame_urgency",
+     "uid": "8688416f"
+    },
+    {
+     "id": "hud_banner",
+     "uid": "bb63b6ac"
+    },
+    {
+     "id": "hud_caption",
+     "uid": "e2fecf9b"
+    },
+    {
+     "id": "hud_legend",
+     "uid": "1acbb240"
+    },
+    {
+     "id": "hud_title",
+     "uid": "1d370499"
+    },
+    {
+     "id": "link",
+     "uid": "b811c04e"
+    },
+    {
+     "id": "phone_1",
+     "uid": "78d4d7aa"
+    },
+    {
+     "id": "sender",
+     "uid": "4c5f4861"
+    },
+    {
+     "id": "tag_body",
+     "uid": "e912ddc3"
+    },
+    {
+     "id": "tag_brand",
+     "uid": "aef6cae6"
+    },
+    {
+     "id": "tag_link",
+     "uid": "8cfcbb77"
+    },
+    {
+     "id": "tag_sender",
+     "uid": "e2484782"
+    },
+    {
+     "id": "tag_urgency",
+     "uid": "9b92c85c"
+    },
+    {
+     "id": "urgency",
+     "uid": "945b36cf"
+    }
+   ],
+   "outcomes": {
+    "active": false
+   }
+  },
+  "direction": {
+   "focus": "link",
+   "camera": [
+    -0.146,
+    -5.834,
+    2.083
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "Would you follow this link, or verify the message through your\ncarrier's official app?",
+   "targets": [
+    "overview",
+    "phone",
+    "message",
+    "sender",
+    "brand",
+    "body",
+    "urgency",
+    "link"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  }
+ },
+ {
+  "step": 2,
+  "text": "What makes that message suspicious?",
+  "tool": "scam_inspect",
+  "args": {},
+  "reply": "The message comes from an unknown number not in your contacts. It claims to be your carrier using the name CarrierAlert. It uses a scary alert about an unusual sign-in. It pressures you with a 24-hour deadline and threatens to suspend your service. The link is not your carrier's real site because it is not https and has a look-alike name with many hyphens. These signs come from a simple heuristic checklist, not a certainty, so check through the official app.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "The message comes from an unknown number not in your contacts.",
+    "focus": "sender",
+    "caption": "The message comes from an unknown number not in your contacts.",
+    "callout": null
+   },
+   {
+    "text": "It claims to be your carrier using the name CarrierAlert.",
+    "focus": "brand",
+    "caption": "It claims to be your carrier using the name CarrierAlert.",
+    "callout": null
+   },
+   {
+    "text": "It uses a scary alert about an unusual sign-in.",
+    "focus": "body",
+    "caption": "It uses a scary alert about an unusual sign-in.",
+    "callout": null
+   },
+   {
+    "text": "It pressures you with a 24-hour deadline and threatens to suspend your service.",
+    "focus": "urgency",
+    "caption": "It pressures you with a 24-hour deadline and threatens to suspend your\nservice.",
+    "callout": null
+   },
+   {
+    "text": "The link is not your carrier's real site",
+    "focus": "link",
+    "caption": "The link is not your carrier's real site",
+    "callout": null
+   },
+   {
+    "text": "because it is not https and has a look-alike name with many hyphens.",
+    "focus": null,
+    "caption": "because it is not https and has a look-alike name with many hyphens.",
+    "callout": null
+   },
+   {
+    "text": "These signs come from a simple heuristic checklist, not a certainty,",
+    "focus": null,
+    "caption": "These signs come from a simple heuristic checklist, not a certainty,",
+    "callout": null
+   },
+   {
+    "text": "so check through the official app.",
+    "focus": null,
+    "caption": "so check through the official app.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "sender",
+    "got": "sender",
+    "code": 200
+   },
+   {
+    "want": "brand",
+    "got": "brand",
+    "code": 200
+   },
+   {
+    "want": "body",
+    "got": "body",
+    "code": 200
+   },
+   {
+    "want": "urgency",
+    "got": "urgency",
+    "code": 200
+   },
+   {
+    "want": "link",
+    "got": "link",
+    "code": 200
+   }
+  ],
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "What makes that message suspicious?"
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. The Spot the Scam lesson is on screen: a phone shows one FICTIONAL suspicious text from an unknown number: 'CarrierAlert: Unusual sign-in detected on your account. Verify within 24 hrs or your service will be suspended. http://carrier-verify-acct.example/login'. Its warning signs have not been shown yet."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "1 concept(s), 3 fact(s)",
+    "detail": "Smishing (scam texts)"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: scam_inspect",
+    "detail": "The Spot the Scam phone is on screen and the user is asking about warning signs."
+   },
+   {
+    "stage": "calculate",
+    "status": "start",
+    "title": "Checking the message",
+    "detail": "HEURISTIC PROTOTYPE keyword rules (director/scam/detector.py)"
+   },
+   {
+    "stage": "calculate",
+    "status": "ok",
+    "title": "Heuristic: likely scam (7 warning signs)",
+    "detail": "keyword rules, not a trained model: no calibrated probability"
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Tagging the warning signs on the phone",
+    "detail": "scam_request_v1 mark"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: scam mark ok",
+    "detail": "scene v2"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 6/6 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "Nemotron explains the warning signs the heuristic found"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "calculate",
+    "status": "info",
+    "title": "Warning signs",
+    "detail": "The sender line: from a number you don't know (not in your contacts). · The link: a link whose address isn't your carrier's real site (http://carrier-verify-acct.example/login: not https, look-alike name (verify in carrier-verify-acct.example), many hyphens in the name). · The company name: claims to be a company you trust (your carrier) (CarrierAlert). · The alert: a scary account alert to make you react (Unusual sign-in). · The deadline and threat: pressure to act fast (a short deadline) (with"
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "grounding": {
+   "numbers": "scenario",
+   "number_check": true,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "smishing",
+     "name": "Smishing (scam texts)",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "smishing_def",
+     "concept": "smishing",
+     "kind": "definition",
+     "text": "Smishing is phishing by text message: a text that pretends to come from a company you trust so that you tap a link, reply, or share account or payment details.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "smishing_lures",
+     "concept": "smishing",
+     "kind": "rule_of_thumb",
+     "text": "Common scam-text lures are fake fraud or sign-in alerts, package delivery problems, unpaid tolls, and prize or refund offers.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "smishing_signs",
+     "concept": "smishing",
+     "kind": "rule_of_thumb",
+     "text": "Warning signs of phishing include urgent or emotional language, requests for personal or financial information, and misspelled or look-alike addresses.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_phishing",
+      "title": "CISA Secure Our World: Recognize and Report Phishing",
+      "url": "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "scams_have_typos"
+   ],
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "lesson": {
+   "kind": "scam",
+   "title": "Spot the Scam",
+   "chips": [
+    "FICTIONAL message",
+    "Heuristic: likely scam · 7 signs"
+   ],
+   "choice": null,
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "seconds": 24.7,
+  "scene_version": [
+   1,
+   2
+  ],
+  "scam": {
+   "present": true,
+   "scenario": "carrier_signin_alert",
+   "title": "Spot the Scam",
+   "banner": "FICTIONAL EXAMPLE · educational simulation · not a real message",
+   "sender": "+1 (469) 555-0142",
+   "segments": {
+    "brand": "CarrierAlert:",
+    "body": "Unusual sign-in detected on your account.",
+    "urgency": "Verify within 24 hrs or your service will be suspended.",
+    "link": "http://carrier-verify-acct.example/login"
+   },
+   "tags": {
+    "sender": "Unknown sender",
+    "brand": "Pretends to be your carrier",
+    "body": "Scary alert",
+    "urgency": "Rush: 24-hour deadline",
+    "link": "Look-alike link"
+   },
+   "highlight": "link",
+   "objects": [
+    {
+     "id": "body",
+     "uid": "7be006aa"
+    },
+    {
+     "id": "brand",
+     "uid": "4bdea655"
+    },
+    {
+     "id": "frame_body",
+     "uid": "b3db6329"
+    },
+    {
+     "id": "frame_brand",
+     "uid": "e4723fa3"
+    },
+    {
+     "id": "frame_link",
+     "uid": "e6bb2fd1"
+    },
+    {
+     "id": "frame_sender",
+     "uid": "6d17d8db"
+    },
+    {
+     "id": "frame_urgency",
+     "uid": "8688416f"
+    },
+    {
+     "id": "hud_banner",
+     "uid": "bb63b6ac"
+    },
+    {
+     "id": "hud_caption",
+     "uid": "e2fecf9b"
+    },
+    {
+     "id": "hud_legend",
+     "uid": "1acbb240"
+    },
+    {
+     "id": "hud_title",
+     "uid": "1d370499"
+    },
+    {
+     "id": "link",
+     "uid": "b811c04e"
+    },
+    {
+     "id": "phone_1",
+     "uid": "78d4d7aa"
+    },
+    {
+     "id": "sender",
+     "uid": "4c5f4861"
+    },
+    {
+     "id": "tag_body",
+     "uid": "e912ddc3"
+    },
+    {
+     "id": "tag_brand",
+     "uid": "aef6cae6"
+    },
+    {
+     "id": "tag_link",
+     "uid": "8cfcbb77"
+    },
+    {
+     "id": "tag_sender",
+     "uid": "e2484782"
+    },
+    {
+     "id": "tag_urgency",
+     "uid": "9b92c85c"
+    },
+    {
+     "id": "urgency",
+     "uid": "945b36cf"
+    }
+   ],
+   "outcomes": {
+    "active": false
+   }
+  },
+  "direction": {
+   "focus": "link",
+   "camera": [
+    0.825,
+    -5.854,
+    2.084
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "so check through the official app.",
+   "targets": [
+    "overview",
+    "phone",
+    "message",
+    "sender",
+    "brand",
+    "body",
+    "urgency",
+    "link"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  }
+ },
+ {
+  "step": 3,
+  "text": "What if I follow the link?",
+  "tool": "scam_choose",
+  "args": {
+   "choice": "follow_link"
+  },
+  "reply": "This is a hypothetical simulation. The link opens a look-alike page and anything typed there goes straight to the scammer, risking account takeover or a SIM swap. The safer choice is to open your carrier's official app yourself and forward the text to 7726 (SPAM).",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "This is a hypothetical simulation.",
+    "focus": "outcome_a",
+    "caption": "This is a hypothetical simulation.",
+    "callout": null
+   },
+   {
+    "text": "The link opens a look-alike page and anything typed there goes straight to the scammer, risking account takeover or a SIM swap.",
+    "focus": "outcome_a",
+    "caption": "The link opens a look-alike page and anything typed there goes\nstraight to the scammer, risking account takeover or a SIM swap.",
+    "callout": null
+   },
+   {
+    "text": "The safer choice is to open your carrier's official app yourself and forward the text to 7726 (SPAM).",
+    "focus": "outcome_b",
+    "caption": "The safer choice is to open your carrier's official app yourself and\nforward the text to 7726 (SPAM).",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "outcome_a",
+    "got": "outcome_a",
+    "code": 200
+   },
+   {
+    "want": "outcome_b",
+    "got": "outcome_b",
+    "code": 200
+   }
+  ],
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "What if I follow the link?"
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. The Spot the Scam lesson is on screen: a phone shows one FICTIONAL suspicious text from an unknown number: 'CarrierAlert: Unusual sign-in detected on your account. Verify within 24 hrs or your service will be suspended. http://carrier-verify-acct.example/login'. Warning-sign tags are shown on 5 parts of it."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "1 concept(s), 2 fact(s)",
+    "detail": "Suspicious links"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: scam_choose",
+    "detail": "The learner asks what happens if they follow the link in the scam text."
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Showing both hypothetical outcomes side by side",
+    "detail": "scam_request_v1 outcomes"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: scam outcomes ok",
+    "detail": "scene v3"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 12/12 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "Nemotron explains the outcome of the learner's choice"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "grounding": {
+   "numbers": "scenario",
+   "number_check": true,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "suspicious_links",
+     "name": "Suspicious links",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "links_fake_page",
+     "concept": "suspicious_links",
+     "kind": "rule_of_thumb",
+     "text": "A link in an unexpected text can open a fake page that collects whatever you type, or install malware.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "links_lookalike",
+     "concept": "suspicious_links",
+     "kind": "rule_of_thumb",
+     "text": "Look-alike addresses mix a familiar name with words like verify, secure or login; the safe habit is to skip the link and open the official app or a website you type yourself.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_phishing",
+      "title": "CISA Secure Our World: Recognize and Report Phishing",
+      "url": "https://www.cisa.gov/secure-our-world/recognize-and-report-phishing"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "https_means_safe"
+   ],
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "lesson": {
+   "kind": "scam",
+   "title": "Spot the Scam",
+   "chips": [
+    "FICTIONAL message",
+    "Heuristic: likely scam · 7 signs",
+    "Choice: follow the link (A)"
+   ],
+   "choice": "follow_link",
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "seconds": 12.0,
+  "scene_version": [
+   2,
+   3
+  ],
+  "scam": {
+   "present": true,
+   "scenario": "carrier_signin_alert",
+   "title": "Two choices, two outcomes (hypothetical simulations)",
+   "banner": "FICTIONAL EXAMPLE · educational simulation · not a real message",
+   "sender": "+1 (469) 555-0142",
+   "segments": {
+    "brand": "CarrierAlert:",
+    "body": "Unusual sign-in detected on your account.",
+    "urgency": "Verify within 24 hrs or your service will be suspended.",
+    "link": "http://carrier-verify-acct.example/login"
+   },
+   "tags": {
+    "sender": "Unknown sender",
+    "brand": "Pretends to be your carrier",
+    "body": "Scary alert",
+    "urgency": "Rush: 24-hour deadline",
+    "link": "Look-alike link"
+   },
+   "highlight": null,
+   "objects": [
+    {
+     "id": "body",
+     "uid": "7be006aa"
+    },
+    {
+     "id": "brand",
+     "uid": "4bdea655"
+    },
+    {
+     "id": "frame_body",
+     "uid": "b3db6329"
+    },
+    {
+     "id": "frame_brand",
+     "uid": "e4723fa3"
+    },
+    {
+     "id": "frame_link",
+     "uid": "e6bb2fd1"
+    },
+    {
+     "id": "frame_sender",
+     "uid": "6d17d8db"
+    },
+    {
+     "id": "frame_urgency",
+     "uid": "8688416f"
+    },
+    {
+     "id": "hud_banner",
+     "uid": "bb63b6ac"
+    },
+    {
+     "id": "hud_caption",
+     "uid": "e2fecf9b"
+    },
+    {
+     "id": "hud_legend",
+     "uid": "1acbb240"
+    },
+    {
+     "id": "hud_title",
+     "uid": "1d370499"
+    },
+    {
+     "id": "link",
+     "uid": "b811c04e"
+    },
+    {
+     "id": "outcome_a",
+     "uid": "7323add2"
+    },
+    {
+     "id": "outcome_a_chosen",
+     "uid": "377b9d28"
+    },
+    {
+     "id": "outcome_b",
+     "uid": "6dfdae1a"
+    },
+    {
+     "id": "phone_1",
+     "uid": "78d4d7aa"
+    },
+    {
+     "id": "sender",
+     "uid": "4c5f4861"
+    },
+    {
+     "id": "tag_body",
+     "uid": "e912ddc3"
+    },
+    {
+     "id": "tag_brand",
+     "uid": "aef6cae6"
+    },
+    {
+     "id": "tag_link",
+     "uid": "8cfcbb77"
+    },
+    {
+     "id": "tag_sender",
+     "uid": "e2484782"
+    },
+    {
+     "id": "tag_urgency",
+     "uid": "9b92c85c"
+    },
+    {
+     "id": "urgency",
+     "uid": "945b36cf"
+    }
+   ],
+   "outcomes": {
+    "active": true,
+    "choice": "follow_link",
+    "marked": [
+     "follow_link"
+    ],
+    "headlines": {
+     "follow_link": "SCENARIO A · Follow the link\n(hypothetical simulation)",
+     "verify_official": "SCENARIO B · Verify independently\n(hypothetical simulation)"
+    },
+    "follow_link": {
+     "present": true,
+     "texts": [
+      "5G  100%",
+      "9:41",
+      "Account PIN",
+      "Not your carrier's site: a look-alike page",
+      "Password",
+      "Phone number",
+      "Risk: account takeover, number transfer (SIM swap), fraud charges",
+      "SCENARIO A · Follow the link (hypothetical simulation)",
+      "SIMULATED: anything typed here goes straight to the scammer",
+      "Verify now",
+      "Verify your account",
+      "YOUR CHOICE",
+      "carrier-verify-acct.example/login"
+     ],
+     "center_x": -5.6
+    },
+    "verify_official": {
+     "present": true,
+     "texts": [
+      "5G  100%",
+      "9:41",
+      "Account status: no alerts",
+      "No unusual sign-in on record",
+      "Opened yourself, not from the text",
+      "Report the text: forward it to 7726 (SPAM), then delete it",
+      "SCENARIO B · Verify independently (hypothetical simulation)",
+      "Safe: the warning was checked without touching the link",
+      "Your carrier's official app"
+     ],
+     "center_x": 7.2
+    }
+   }
+  },
+  "direction": {
+   "focus": "outcome_b",
+   "camera": [
+    7.204,
+    -14.798,
+    3.971
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "The safer choice is to open your carrier's official app yourself and\nforward the text to 7726 (SPAM).",
+   "targets": [
+    "overview",
+    "phone",
+    "message",
+    "sender",
+    "brand",
+    "body",
+    "urgency",
+    "link",
+    "outcomes",
+    "outcome_a",
+    "outcome_b"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  }
+ },
+ {
+  "step": 4,
+  "text": "What should I do instead?",
+  "tool": "scam_choose",
+  "args": {
+   "choice": "verify_official"
+  },
+  "reply": "That is a good choice. This is a hypothetical educational simulation. Opening your carrier's official app yourself checks the alert without touching the link, and here it shows no alerts. Report the text by forwarding it to 7726 SPAM and delete it. The left side shows what the link would have done.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "That is a good choice.",
+    "focus": "outcome_b",
+    "caption": "That is a good choice.",
+    "callout": null
+   },
+   {
+    "text": "This is a hypothetical educational simulation.",
+    "focus": null,
+    "caption": "This is a hypothetical educational simulation.",
+    "callout": null
+   },
+   {
+    "text": "Opening your carrier's official app yourself checks the alert without touching the link, and here it shows no alerts.",
+    "focus": "outcome_b",
+    "caption": "Opening your carrier's official app yourself checks the alert without\ntouching the link, and here it shows no alerts.",
+    "callout": null
+   },
+   {
+    "text": "Report the text by forwarding it to 7726 SPAM and delete it.",
+    "focus": "outcome_b",
+    "caption": "Report the text by forwarding it to 7726 SPAM and delete it.",
+    "callout": null
+   },
+   {
+    "text": "The left side shows what the link would have done.",
+    "focus": "outcome_a",
+    "caption": "The left side shows what the link would have done.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "outcome_b",
+    "got": "outcome_b",
+    "code": 200
+   },
+   {
+    "want": "outcome_a",
+    "got": "outcome_a",
+    "code": 200
+   }
+  ],
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "What should I do instead?"
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. The Spot the Scam lesson is on screen: a phone shows one FICTIONAL suspicious text from an unknown number: 'CarrierAlert: Unusual sign-in detected on your account. Verify within 24 hrs or your service will be suspended. http://carrier-verify-acct.example/login'. Warning-sign tags are shown on 5 parts of it. Both hypothetical outcomes are shown beside it (A: follow the link, B: verify independently); the learner chose A."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "1 concept(s), 3 fact(s)",
+    "detail": "Protective actions"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: scam_choose",
+    "detail": "The learner asks what to do instead of following the link, which maps to the safe choice of verifying independently."
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Showing both hypothetical outcomes side by side",
+    "detail": "scam_request_v1 outcomes"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: scam outcomes ok",
+    "detail": "scene v4"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 12/12 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "Nemotron explains the outcome of the learner's choice"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "grounding": {
+   "numbers": "scenario",
+   "number_check": true,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "protective_actions",
+     "name": "Protective actions",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "protect_dont_reply",
+     "concept": "protective_actions",
+     "kind": "rule_of_thumb",
+     "text": "Don't reply to an unexpected text or tap its links; report it and delete it instead.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "protect_number",
+     "concept": "protective_actions",
+     "kind": "rule_of_thumb",
+     "text": "If a scammer may control your phone number, contact your carrier from its official number and change your account password; ask about protections against SIM swaps and port-outs.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_scammed",
+      "title": "FTC Consumer Advice: What To Do if You Were Scammed",
+      "url": "https://consumer.ftc.gov/system/files/consumer_ftc_gov/pdf/What%20to%20do%20if%20you%20were%20scammed_EN_0.pdf"
+     }
+    },
+    {
+     "id": "protect_password",
+     "concept": "protective_actions",
+     "kind": "rule_of_thumb",
+     "text": "If you gave a password away, change it right away, along with any account that reused it, and turn on multi-factor authentication.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_social",
+      "title": "CISA: Avoiding Social Engineering and Phishing Attacks",
+      "url": "https://www.cisa.gov/news-events/news/avoiding-social-engineering-and-phishing-attacks"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "reply_stop_safe"
+   ],
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "lesson": {
+   "kind": "scam",
+   "title": "Spot the Scam",
+   "chips": [
+    "FICTIONAL message",
+    "Heuristic: likely scam · 7 signs",
+    "Choice: verify independently (B)"
+   ],
+   "choice": "verify_official",
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "seconds": 17.9,
+  "scene_version": [
+   3,
+   4
+  ],
+  "scam": {
+   "present": true,
+   "scenario": "carrier_signin_alert",
+   "title": "Two choices, two outcomes (hypothetical simulations)",
+   "banner": "FICTIONAL EXAMPLE · educational simulation · not a real message",
+   "sender": "+1 (469) 555-0142",
+   "segments": {
+    "brand": "CarrierAlert:",
+    "body": "Unusual sign-in detected on your account.",
+    "urgency": "Verify within 24 hrs or your service will be suspended.",
+    "link": "http://carrier-verify-acct.example/login"
+   },
+   "tags": {
+    "sender": "Unknown sender",
+    "brand": "Pretends to be your carrier",
+    "body": "Scary alert",
+    "urgency": "Rush: 24-hour deadline",
+    "link": "Look-alike link"
+   },
+   "highlight": null,
+   "objects": [
+    {
+     "id": "body",
+     "uid": "7be006aa"
+    },
+    {
+     "id": "brand",
+     "uid": "4bdea655"
+    },
+    {
+     "id": "frame_body",
+     "uid": "b3db6329"
+    },
+    {
+     "id": "frame_brand",
+     "uid": "e4723fa3"
+    },
+    {
+     "id": "frame_link",
+     "uid": "e6bb2fd1"
+    },
+    {
+     "id": "frame_sender",
+     "uid": "6d17d8db"
+    },
+    {
+     "id": "frame_urgency",
+     "uid": "8688416f"
+    },
+    {
+     "id": "hud_banner",
+     "uid": "bb63b6ac"
+    },
+    {
+     "id": "hud_caption",
+     "uid": "e2fecf9b"
+    },
+    {
+     "id": "hud_legend",
+     "uid": "1acbb240"
+    },
+    {
+     "id": "hud_title",
+     "uid": "1d370499"
+    },
+    {
+     "id": "link",
+     "uid": "b811c04e"
+    },
+    {
+     "id": "outcome_a",
+     "uid": "e469c850"
+    },
+    {
+     "id": "outcome_b",
+     "uid": "88a60880"
+    },
+    {
+     "id": "outcome_b_chosen",
+     "uid": "f107e3d2"
+    },
+    {
+     "id": "phone_1",
+     "uid": "78d4d7aa"
+    },
+    {
+     "id": "sender",
+     "uid": "4c5f4861"
+    },
+    {
+     "id": "tag_body",
+     "uid": "e912ddc3"
+    },
+    {
+     "id": "tag_brand",
+     "uid": "aef6cae6"
+    },
+    {
+     "id": "tag_link",
+     "uid": "8cfcbb77"
+    },
+    {
+     "id": "tag_sender",
+     "uid": "e2484782"
+    },
+    {
+     "id": "tag_urgency",
+     "uid": "9b92c85c"
+    },
+    {
+     "id": "urgency",
+     "uid": "945b36cf"
+    }
+   ],
+   "outcomes": {
+    "active": true,
+    "choice": "verify_official",
+    "marked": [
+     "verify_official"
+    ],
+    "headlines": {
+     "follow_link": "SCENARIO A · Follow the link\n(hypothetical simulation)",
+     "verify_official": "SCENARIO B · Verify independently\n(hypothetical simulation)"
+    },
+    "follow_link": {
+     "present": true,
+     "texts": [
+      "5G  100%",
+      "9:41",
+      "Account PIN",
+      "Not your carrier's site: a look-alike page",
+      "Password",
+      "Phone number",
+      "Risk: account takeover, number transfer (SIM swap), fraud charges",
+      "SCENARIO A · Follow the link (hypothetical simulation)",
+      "SIMULATED: anything typed here goes straight to the scammer",
+      "Verify now",
+      "Verify your account",
+      "carrier-verify-acct.example/login"
+     ],
+     "center_x": -5.6
+    },
+    "verify_official": {
+     "present": true,
+     "texts": [
+      "5G  100%",
+      "9:41",
+      "Account status: no alerts",
+      "No unusual sign-in on record",
+      "Opened yourself, not from the text",
+      "Report the text: forward it to 7726 (SPAM), then delete it",
+      "SCENARIO B · Verify independently (hypothetical simulation)",
+      "Safe: the warning was checked without touching the link",
+      "YOUR CHOICE",
+      "Your carrier's official app"
+     ],
+     "center_x": 7.2
+    }
+   }
+  },
+  "direction": {
+   "focus": "outcome_a",
+   "camera": [
+    -5.594,
+    -14.798,
+    3.971
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "The left side shows what the link would have done.",
+   "targets": [
+    "overview",
+    "phone",
+    "message",
+    "sender",
+    "brand",
+    "body",
+    "urgency",
+    "link",
+    "outcomes",
+    "outcome_a",
+    "outcome_b"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  }
+ },
+ {
+  "step": 5,
+  "text": "What if I already typed my password?",
+  "tool": "scam_recover",
+  "args": {},
+  "reply": "Acting fast helps. Change that password and your account PIN right away in the official app or website, and anywhere you reused it. Call your carrier on the number from its official website or your bill. Report it and ask it to lock number transfers for SIM swap protection. Turn on 2-step verification, sign out other devices, and check for new devices or call forwarding. Watch your bank and card statements. Report the scam at ReportFraud.ftc.gov. Use IdentityTheft.gov if ID numbers were taken. Do not tap links or share codes.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "Acting fast helps.",
+    "focus": "outcome_a",
+    "caption": "Acting fast helps.",
+    "callout": null
+   },
+   {
+    "text": "Change that password and your account PIN right away in the official app or website, and anywhere you reused it.",
+    "focus": "outcome_a",
+    "caption": "Change that password and your account PIN right away in the official\napp or website, and anywhere you reused it.",
+    "callout": null
+   },
+   {
+    "text": "Call your carrier on the number from its official website or your bill.",
+    "focus": "outcome_b",
+    "caption": "Call your carrier on the number from its official website or your\nbill.",
+    "callout": null
+   },
+   {
+    "text": "Report it and ask it to lock number transfers for SIM swap protection.",
+    "focus": "outcome_b",
+    "caption": "Report it and ask it to lock number transfers for SIM swap protection.",
+    "callout": null
+   },
+   {
+    "text": "Turn on 2-step verification, sign out other devices, and check for new devices or call forwarding.",
+    "focus": null,
+    "caption": "Turn on 2-step verification, sign out other devices, and check for new\ndevices or call forwarding.",
+    "callout": null
+   },
+   {
+    "text": "Watch your bank and card statements.",
+    "focus": null,
+    "caption": "Watch your bank and card statements.",
+    "callout": null
+   },
+   {
+    "text": "Report the scam at ReportFraud.ftc.gov.",
+    "focus": "outcome_b",
+    "caption": "Report the scam at ReportFraud.ftc.gov.",
+    "callout": null
+   },
+   {
+    "text": "Use IdentityTheft.gov if ID numbers were taken.",
+    "focus": null,
+    "caption": "Use IdentityTheft.gov if ID numbers were taken.",
+    "callout": null
+   },
+   {
+    "text": "Do not tap links or share codes.",
+    "focus": "outcome_a",
+    "caption": "Do not tap links or share codes.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "outcome_a",
+    "got": "outcome_a",
+    "code": 200
+   },
+   {
+    "want": "outcome_b",
+    "got": "outcome_b",
+    "code": 200
+   },
+   {
+    "want": "outcome_a",
+    "got": "outcome_a",
+    "code": 200
+   }
+  ],
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "What if I already typed my password?"
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. The Spot the Scam lesson is on screen: a phone shows one FICTIONAL suspicious text from an unknown number: 'CarrierAlert: Unusual sign-in detected on your account. Verify within 24 hrs or your service will be suspended. http://carrier-verify-acct.example/login'. Warning-sign tags are shown on 5 parts of it. Both hypothetical outcomes are shown beside it (A: follow the link, B: verify independently); the learner chose B."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "1 concept(s), 2 fact(s)",
+    "detail": "Credential theft"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: scam_recover",
+    "detail": "The learner says they already typed their password, which triggers the recovery steps for the Spot the Scam lesson."
+   },
+   {
+    "stage": "apply",
+    "status": "info",
+    "title": "No scene change",
+    "detail": "recovery steps for the phone on stage"
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "Nemotron explains the recovery steps"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "grounding": {
+   "numbers": "scenario",
+   "number_check": true,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "credential_theft",
+     "name": "Credential theft",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "credential_def",
+     "concept": "credential_theft",
+     "kind": "definition",
+     "text": "Credential theft means tricking someone into giving away login details such as a password, PIN or one-time code, so the thief can sign in as them.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_social",
+      "title": "CISA: Avoiding Social Engineering and Phishing Attacks",
+      "url": "https://www.cisa.gov/news-events/news/avoiding-social-engineering-and-phishing-attacks"
+     }
+    },
+    {
+     "id": "credential_sim_swap",
+     "concept": "credential_theft",
+     "kind": "rule_of_thumb",
+     "text": "With someone's carrier account details, a thief can try to move their phone number to a SIM the thief controls (SIM swap or port-out fraud) and then receive their text-message codes.",
+     "status": "sourced",
+     "source": {
+      "id": "fcc_sim_swap",
+      "title": "FCC Consumer Guide: Protect Yourself From SIM Swapping and Port-Out Fraud",
+      "url": "https://www.fcc.gov/consumers/guides/protect-yourself-sim-swapping-and-port-out-fraud"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "carrier_asks_password"
+   ],
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "lesson": {
+   "kind": "scam",
+   "title": "Spot the Scam",
+   "chips": [
+    "FICTIONAL message",
+    "Heuristic: likely scam · 7 signs",
+    "Choice: verify independently (B)"
+   ],
+   "choice": "verify_official",
+   "detector": "HEURISTIC PROTOTYPE (keyword rules, not a trained model)"
+  },
+  "seconds": 19.2,
+  "scene_version": [
+   4,
+   4
+  ],
+  "scam": {
+   "present": true,
+   "scenario": "carrier_signin_alert",
+   "title": "Two choices, two outcomes (hypothetical simulations)",
+   "banner": "FICTIONAL EXAMPLE · educational simulation · not a real message",
+   "sender": "+1 (469) 555-0142",
+   "segments": {
+    "brand": "CarrierAlert:",
+    "body": "Unusual sign-in detected on your account.",
+    "urgency": "Verify within 24 hrs or your service will be suspended.",
+    "link": "http://carrier-verify-acct.example/login"
+   },
+   "tags": {
+    "sender": "Unknown sender",
+    "brand": "Pretends to be your carrier",
+    "body": "Scary alert",
+    "urgency": "Rush: 24-hour deadline",
+    "link": "Look-alike link"
+   },
+   "highlight": null,
+   "objects": [
+    {
+     "id": "body",
+     "uid": "7be006aa"
+    },
+    {
+     "id": "brand",
+     "uid": "4bdea655"
+    },
+    {
+     "id": "frame_body",
+     "uid": "b3db6329"
+    },
+    {
+     "id": "frame_brand",
+     "uid": "e4723fa3"
+    },
+    {
+     "id": "frame_link",
+     "uid": "e6bb2fd1"
+    },
+    {
+     "id": "frame_sender",
+     "uid": "6d17d8db"
+    },
+    {
+     "id": "frame_urgency",
+     "uid": "8688416f"
+    },
+    {
+     "id": "hud_banner",
+     "uid": "bb63b6ac"
+    },
+    {
+     "id": "hud_caption",
+     "uid": "e2fecf9b"
+    },
+    {
+     "id": "hud_legend",
+     "uid": "1acbb240"
+    },
+    {
+     "id": "hud_title",
+     "uid": "1d370499"
+    },
+    {
+     "id": "link",
+     "uid": "b811c04e"
+    },
+    {
+     "id": "outcome_a",
+     "uid": "e469c850"
+    },
+    {
+     "id": "outcome_b",
+     "uid": "88a60880"
+    },
+    {
+     "id": "outcome_b_chosen",
+     "uid": "f107e3d2"
+    },
+    {
+     "id": "phone_1",
+     "uid": "78d4d7aa"
+    },
+    {
+     "id": "sender",
+     "uid": "4c5f4861"
+    },
+    {
+     "id": "tag_body",
+     "uid": "e912ddc3"
+    },
+    {
+     "id": "tag_brand",
+     "uid": "aef6cae6"
+    },
+    {
+     "id": "tag_link",
+     "uid": "8cfcbb77"
+    },
+    {
+     "id": "tag_sender",
+     "uid": "e2484782"
+    },
+    {
+     "id": "tag_urgency",
+     "uid": "9b92c85c"
+    },
+    {
+     "id": "urgency",
+     "uid": "945b36cf"
+    }
+   ],
+   "outcomes": {
+    "active": true,
+    "choice": "verify_official",
+    "marked": [
+     "verify_official"
+    ],
+    "headlines": {
+     "follow_link": "SCENARIO A · Follow the link\n(hypothetical simulation)",
+     "verify_official": "SCENARIO B · Verify independently\n(hypothetical simulation)"
+    },
+    "follow_link": {
+     "present": true,
+     "texts": [
+      "5G  100%",
+      "9:41",
+      "Account PIN",
+      "Not your carrier's site: a look-alike page",
+      "Password",
+      "Phone number",
+      "Risk: account takeover, number transfer (SIM swap), fraud charges",
+      "SCENARIO A · Follow the link (hypothetical simulation)",
+      "SIMULATED: anything typed here goes straight to the scammer",
+      "Verify now",
+      "Verify your account",
+      "carrier-verify-acct.example/login"
+     ],
+     "center_x": -5.6
+    },
+    "verify_official": {
+     "present": true,
+     "texts": [
+      "5G  100%",
+      "9:41",
+      "Account status: no alerts",
+      "No unusual sign-in on record",
+      "Opened yourself, not from the text",
+      "Report the text: forward it to 7726 (SPAM), then delete it",
+      "SCENARIO B · Verify independently (hypothetical simulation)",
+      "Safe: the warning was checked without touching the link",
+      "YOUR CHOICE",
+      "Your carrier's official app"
+     ],
+     "center_x": 7.2
+    }
+   }
+  },
+  "direction": {
+   "focus": "outcome_a",
+   "camera": [
+    -5.594,
+    -14.798,
+    3.971
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "Do not tap links or share codes.",
+   "targets": [
+    "overview",
+    "phone",
+    "message",
+    "sender",
+    "brand",
+    "body",
+    "urgency",
+    "link",
+    "outcomes",
+    "outcome_a",
+    "outcome_b"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  }
+ },
+ {
+  "step": 6,
+  "text": "Teach me why LEDs need resistors.",
+  "tool": "teach_led_resistor",
+  "args": {},
+  "reply": "The LED only drops about 2 volts, so without a resistor nothing limits the current and the LED would burn out. With 330 ohms, the resistor takes the remaining 7 volts and sets the current to about 21 milliamps, making the LED bright. This is a simplified model where the LED is treated as a fixed 2 volt drop.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "The LED only drops about 2 volts,",
+    "focus": "overview",
+    "caption": "The LED only drops about 2 volts,"
+   },
+   {
+    "text": "so without a resistor nothing limits the current and the LED would burn out.",
+    "focus": "resistor",
+    "caption": "so without a resistor nothing limits the current and the LED would\nburn out."
+   },
+   {
+    "text": "With 330 ohms, the resistor takes the remaining 7 volts and sets the current to about 21 milliamps, making the LED bright.",
+    "focus": "resistor",
+    "caption": "With 330 ohms, the resistor takes the remaining 7 volts and sets the\ncurrent to about 21 milliamps, making the LED bright."
+   },
+   {
+    "text": "This is a simplified model where the LED is treated as a fixed 2 volt drop.",
+    "focus": "led",
+    "caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop."
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "overview",
+    "got": "overview",
+    "code": 200
+   },
+   {
+    "want": "resistor",
+    "got": "resistor",
+    "code": 200
+   },
+   {
+    "want": "led",
+    "got": "led",
+    "code": 200
+   }
+  ],
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Teach me why LEDs need resistors."
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. The Spot the Scam lesson is on screen: a phone shows one FICTIONAL suspicious text from an unknown number: 'CarrierAlert: Unusual sign-in detected on your account. Verify within 24 hrs or your service will be suspended. http://carrier-verify-acct.example/login'. Warning-sign tags are shown on 5 parts of it. Both hypothetical outcomes are shown beside it (A: follow the link, B: verify independently); the learner chose B."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "2 concept(s), 6 fact(s)",
+    "detail": "Current limiting, LED"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: teach_led_resistor",
+    "detail": "The user wants the LED resistor lesson, so start it and build the 3D circuit."
+   },
+   {
+    "stage": "calculate",
+    "status": "start",
+    "title": "Calculating",
+    "detail": "director/circuit/model.py: I = (V_source - V_LED) / R"
+   },
+   {
+    "stage": "calculate",
+    "status": "ok",
+    "title": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "detail": ""
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Building the circuit in Blender",
+    "detail": "circuit_request_v1 build"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: build ok",
+    "detail": "scene v5"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 10/10 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "numbers are checked against the calculation"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "grounding": {
+   "numbers": "calculated",
+   "number_check": true,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "current_limiting",
+     "name": "Current limiting",
+     "demo": "interactive"
+    },
+    {
+     "id": "led",
+     "name": "LED",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "limit_formula",
+     "concept": "current_limiting",
+     "kind": "law",
+     "text": "The series resistor takes the rest of the supply voltage and sets the current: I = (V_source − V_LED) / R.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    },
+    {
+     "id": "limit_why",
+     "concept": "current_limiting",
+     "kind": "law",
+     "text": "Because an LED's voltage barely changes once it conducts, nothing in the LED itself limits the current; a series resistor has to set it.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    },
+    {
+     "id": "limit_example_1k",
+     "concept": "current_limiting",
+     "kind": "worked_example",
+     "text": "With the same battery and LED, a 1,000 Ω resistor lowers the current to 7.0 mA, so the LED is dimmer.",
+     "status": "verified",
+     "source": {
+      "id": "td_model",
+      "title": "TinyDirector calculation modules (director/circuit/model.py, director/lesson/calculators.py): the simplified models this tutor computes with",
+      "url": ""
+     }
+    },
+    {
+     "id": "led_direction",
+     "concept": "led",
+     "kind": "definition",
+     "text": "An LED conducts in one direction only, from the anode (+, the longer leg) to the cathode (−, the shorter leg by the flat edge).",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    },
+    {
+     "id": "led_brightness",
+     "concept": "led",
+     "kind": "law",
+     "text": "An LED's brightness follows its current: more current gives more light, up to its rating.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    },
+    {
+     "id": "led_rating",
+     "concept": "led",
+     "kind": "typical_value",
+     "text": "A typical 5 mm indicator LED is rated for about 20 mA of continuous current.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "matched_voltage_no_resistor",
+    "resistor_must_be_first"
+   ]
+  },
+  "lesson": {
+   "kind": "circuit",
+   "title": "Why does an LED need a resistor?",
+   "resistance_ohm": 330.0,
+   "current_ma": 21.212,
+   "chips": [
+    "R = 330 Ω",
+    "I = 21.2 mA",
+    "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA"
+   ]
+  },
+  "seconds": 14.0,
+  "scene_version": [
+   4,
+   5
+  ],
+  "scam": {},
+  "direction": {
+   "focus": "led",
+   "camera": [
+    4.015,
+    -8.618,
+    5.964
+   ],
+   "moving": false,
+   "halo": "led",
+   "caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop.",
+   "targets": [
+    "overview",
+    "battery",
+    "resistor",
+    "led",
+    "current"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  }
+ }
+]
