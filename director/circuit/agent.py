@@ -33,6 +33,10 @@ TOOLS = {
                    "MOSFET, transistor switches, voltage dividers, Ohm's law with one resistor). A director + builder "
                    "agent team designs, builds and verifies a new 3D lesson for it. args: {\"question\": the "
                    "learner's question, rephrased as a clear question}",
+    "explain_concept": "Explain a general electronics concept WITHOUT changing the scene, from the knowledge base. "
+                       "Use it for concepts with no 3D demo (the <knowledge> block says so, e.g. parallel circuits) "
+                       "or a general 'what is X?' that is not about the circuit on screen. args: {\"concept\": "
+                       "a concept id from <knowledge>}",
     "clarify": "The request is not about electronics, or is unsafe or impossible to show (mains wiring, PCB layout, "
                "...). args: {\"message\": short reply saying what IS possible: this lesson's resistor, questions "
                "about the circuit, or a new electronics topic}",
@@ -62,6 +66,9 @@ TOOL_SCHEMA = {
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["question"],
                                           "properties": {"question": {"type": "string", "minLength": 3,
                                                                       "maxLength": 300}}}}}},
+        {"if": {"properties": {"tool": {"const": "explain_concept"}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["concept"],
+                                          "properties": {"concept": {"type": "string", "maxLength": 60}}}}}},
         {"if": {"properties": {"tool": {"const": "clarify"}}},
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["message"],
                                           "properties": {"message": {"type": "string", "maxLength": 500}}}}}},
@@ -87,6 +94,9 @@ Rules:
 - Anything about removing the resistor, or why it is dimmer/brighter -> explain (the scene keeps its values).
 - A question about other components or circuits (transistors, MOSFETs, voltage dividers, ...) -> teach_topic,
   even mid-lesson: the learner may switch topics at any time.
+- <knowledge> lists the concepts the tutor's knowledge base matched and which demo exists for them. A concept
+  with no 3D demo (explanation only) -> explain_concept with its id; never invent a demo for it. Questions about
+  the circuit already on screen still use explain / set_resistance.
 """
 
 EXPLAIN_PROMPT = """EXPLAINER. You are a friendly electronics tutor for complete beginners. The 3D scene has just
@@ -143,11 +153,14 @@ def validate_tool(obj) -> list[str]:
 
 
 def choose_tool(text: str, client: ModelClient, current: LedCircuit | None, history: list[str],
-                trace: Trace) -> ToolCall:
+                trace: Trace, knowledge=None) -> ToolCall:
+    """`knowledge` (director.knowledge.Knowledge, optional) adds the matched concepts and demos to the prompt and
+    lets explain_concept be checked against the knowledge base's concept ids."""
     system = TOOL_PROMPT.format(tools="\n".join(f"- {k}: {v}" for k, v in TOOLS.items()), rmin=R_MIN_OHM,
                                 rmax=R_MAX_OHM)
     user = (f"<circuit_state>{describe_state(current)}</circuit_state>\n"
             + (f"<earlier_turns>{json.dumps(history[-6:])}</earlier_turns>\n" if history else "")
+            + (f"<knowledge>\n{knowledge.tool_hint()}\n</knowledge>\n" if knowledge is not None else "")
             + f"<user_message>{text}</user_message>\nReturn the JSON tool call now.")
     messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     errors: list[str] = []
@@ -161,6 +174,10 @@ def choose_tool(text: str, client: ModelClient, current: LedCircuit | None, hist
             errors = [f"could not parse JSON: {exc}"]
         else:
             errors = validate_tool(obj)
+            if not errors and obj["tool"] == "explain_concept" and knowledge is not None \
+                    and obj["args"]["concept"] not in knowledge.all_ids:
+                errors = [f"args/concept: unknown concept {obj['args']['concept']!r}; known: "
+                          f"{', '.join(sorted(knowledge.all_ids))}"]
             if not errors:
                 call = ToolCall(obj["tool"], obj["args"], obj.get("reason", ""), reply.live, reply.model, attempt)
                 trace.add("validate", f"tool {call.tool} {json.dumps(call.args)} accepted"
@@ -291,8 +308,17 @@ def _clean(text: str) -> str:
     return " ".join(text.split())
 
 
-def explain(facts: dict, client: ModelClient, trace: Trace) -> Explanation:
-    messages = [{"role": "system", "content": EXPLAIN_PROMPT},
+KNOWLEDGE_NOTE = """
+KNOWLEDGE below is trusted background from the tutor's knowledge base. Use it to answer accurately and to gently
+correct a misconception the learner shows. It is NOT a source of numbers: use a number only if it is in FACTS.
+"""
+
+
+def explain(facts: dict, client: ModelClient, trace: Trace, knowledge: str = "", claim_check=None) -> Explanation:
+    """`knowledge`: prompt block from the knowledge base (system prompt; never part of the number check).
+    `claim_check(text) -> [problems]`: rejects text that states a known misconception (1 retry, then template)."""
+    system = EXPLAIN_PROMPT + (KNOWLEDGE_NOTE + "KNOWLEDGE:\n" + knowledge if knowledge else "")
+    messages = [{"role": "system", "content": system},
                 {"role": "user", "content": "FACTS (from the calculation module):\n"
                                             + json.dumps(facts, indent=1, ensure_ascii=False)
                                             + "\nWrite the explanation now."}]
@@ -304,15 +330,18 @@ def explain(facts: dict, client: ModelClient, trace: Trace) -> Explanation:
         text = _clean(reply.content)
         bad = number_check(text, facts)
         too_long = len(text.split()) > 90
+        wrong = claim_check(text) if claim_check and text and not bad and not too_long else []
         trace.add("explain", f"{'LIVE' if reply.live else 'MOCK'} {reply.model} explanation attempt {attempt} "
                              f"({reply.latency_s:.1f}s): "
-                             + ("numbers verified against the calculation" if not bad and text and not too_long else
-                                f"rejected ({'empty' if not text else 'too long' if too_long else 'numbers not in facts: ' + ', '.join(bad)})"))
-        if text and not bad and not too_long:
+                             + ("numbers verified against the calculation" if not bad and text and not too_long
+                                and not wrong else
+                                f"rejected ({'empty' if not text else 'too long' if too_long else 'states a known misconception: ' + '; '.join(wrong) if wrong else 'numbers not in facts: ' + ', '.join(bad)})"))
+        if text and not bad and not too_long and not wrong:
             return Explanation(text, "nemotron" if reply.live else "mock", attempt, rejected)
         rejected.append(text)
         if attempt == 1:
             problem = ("it used numbers that are not in FACTS: " + ", ".join(bad)) if bad else \
+                      ("it states a known misconception: " + "; ".join(wrong)) if wrong else \
                       ("it was empty" if not text else "it was too long")
             messages = messages + [{"role": "assistant", "content": reply.content[:2000]},
                                    {"role": "user", "content": f"Rejected: {problem}. Rewrite it in at most 3 short "

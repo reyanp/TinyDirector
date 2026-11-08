@@ -12,6 +12,7 @@ API (JSON):
   GET  /api/events            Server-Sent Events: structured execution events (director/events.py), replayable
                               with ?since=<id> or the Last-Event-ID header
   GET  /api/snapshot/<file>   a Blender snapshot from the outbox (name-checked)
+  GET  /api/knowledge         the knowledge map: concepts + relations from the SQLite knowledge base
 Every event comes from real execution (director/tutor.py, director/lesson/*). Nothing is simulated for show;
 MOCK / SIMULATED modes are labeled in /api/state and in the UI.
 """
@@ -57,6 +58,7 @@ class Session:
         self.history: list[str] = []
         self.context: dict = {}
         self.lesson: dict | None = None
+        self.knowledge = {"active": [], "discussed": []}  # concept ids: this turn / the whole conversation
 
     # ---- events ----
     def emit(self, stage: str, status: str, title: str, detail: str = "", /, **data) -> None:
@@ -66,15 +68,23 @@ class Session:
                   "title": str(title)[:200], "detail": str(detail or "")[:500], "data": _jsonable(data)}
             self.events.append(ev)
             del self.events[:-MAX_EVENTS]
+            if stage == "knowledge" and status in ("ok", "info"):
+                self.knowledge["active"] = [c["id"] for c in ev["data"].get("concepts", [])]
             if stage == "turn":
                 self._finish_turn(ev)
             self.cond.notify_all()
 
     def _finish_turn(self, ev: dict) -> None:
         d = ev["data"]
+        grounding = d.get("grounding")
+        if grounding and grounding.get("concepts"):  # the concepts the answer was actually grounded in
+            self.knowledge["active"] = [c["id"] for c in grounding["concepts"]]
+        for cid in self.knowledge["active"]:
+            if cid not in self.knowledge["discussed"]:
+                self.knowledge["discussed"].append(cid)
         if d.get("reply"):
             self.messages.append({"role": "tutor", "text": d["reply"], "source": d.get("source"), "turn": ev["turn"],
-                                  "ok": ev["status"] == "ok"})
+                                  "ok": ev["status"] == "ok", "grounding": grounding})
         elif ev["status"] == "error":
             self.messages.append({"role": "tutor", "text": f"Something went wrong: {ev['detail']}", "source": "error",
                                   "turn": ev["turn"], "ok": False})
@@ -126,13 +136,14 @@ class Session:
             self.messages.clear()
             self.history.clear()
             self.context.clear()
+            self.knowledge = {"active": [], "discussed": []}
             self.emit("understand", "info", "New conversation", "the Blender scene was not changed")
             return True
 
     def state(self) -> dict:
         with self.cond:
             return {"mode": self.mode, "busy": self.busy, "turn": self.turn, "messages": list(self.messages),
-                    "lesson": self.lesson, "events": [e for e in self.events if e["turn"] >= self.turn - 2][-200:],
+                    "lesson": self.lesson, "knowledge": {k: list(v) for k, v in self.knowledge.items()}, "events": [e for e in self.events if e["turn"] >= self.turn - 2][-200:],
                     "last_event_id": self.seq}
 
 
@@ -140,11 +151,21 @@ POYO_SLOT = '<div class="poyo idle" id="poyo" aria-hidden="true"></div>'
 STATE_SLOT = '<script src="/app.js"></script>'
 
 
+def knowledge_graph() -> dict | None:
+    """The knowledge map (static per seed.json); None if the knowledge base cannot be opened."""
+    try:
+        from .knowledge import get_kb
+        return get_kb().graph()
+    except Exception as exc:  # noqa: BLE001 - the tutor still works without the map
+        print(f"[server] knowledge base unavailable: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return None
+
+
 def render_index(session: Session) -> bytes:
-    """index.html with Poyo's SVG and the current state inlined, so the first paint is already complete."""
+    """index.html with Poyo's SVG, the current state and the knowledge map inlined (complete first paint)."""
     html = (FRONTEND / "index.html").read_text(encoding="utf-8")
     svg = (FRONTEND / "poyo.svg").read_text(encoding="utf-8")
-    state = json.dumps(session.state(), ensure_ascii=False).replace("</", "<\\/")
+    state = json.dumps({**session.state(), "graph": knowledge_graph()}, ensure_ascii=False).replace("</", "<\\/")
     html = html.replace(POYO_SLOT, POYO_SLOT.replace("></div>", f">{svg}</div>"), 1)
     html = html.replace(STATE_SLOT, f"<script>window.__POYO_STATE__ = {state};</script>\n  {STATE_SLOT}", 1)
     return html.encode("utf-8")
@@ -194,6 +215,9 @@ def make_handler(session: Session):
                 return self._json(200, session.state())
             if url.path == "/api/events":
                 return self._stream(url)
+            if url.path == "/api/knowledge":
+                graph = knowledge_graph()
+                return self._json(200, graph) if graph else self._json(503, {"error": "knowledge base unavailable"})
             if url.path.startswith("/api/snapshot/"):
                 name = url.path.rsplit("/", 1)[1]
                 f = paths.OUTBOX / name

@@ -39,7 +39,8 @@ class TutorMockModel:
         system = messages[0]["content"]
         user = "\n".join(m["content"] for m in messages if m["role"] == "user")
         if system.startswith("TOOL_SELECTOR"):
-            content = json.dumps(self._tool(_tag(user, "user_message"), _tag(user, "circuit_state")))
+            content = json.dumps(self._tool(_tag(user, "user_message"), _tag(user, "circuit_state"),
+                                            _tag(user, "knowledge")))
         elif system.startswith("EXPLAINER"):
             content = self._explain(json.loads(user.split("\n", 1)[1].rsplit("\nWrite the explanation now.", 1)[0]))
         else:
@@ -47,7 +48,7 @@ class TutorMockModel:
         return ModelReply(content=content, model=self.model, live=False)
 
     @staticmethod
-    def _tool(message: str, state: str) -> dict:
+    def _tool(message: str, state: str, knowledge: str = "") -> dict:
         low = message.lower()
         ohms = parse_ohms(message)
         no_circuit = state.startswith("No lesson")
@@ -55,6 +56,9 @@ class TutorMockModel:
             return {"tool": "teach_topic", "args": {"question": message}, "reason": "new topic"}
         if ohms is not None and any(w in low for w in ("resistor", "ohm", "Ω".lower(), "back", "change", "make", "set")):
             return {"tool": "set_resistance", "args": {"resistance_ohm": ohms}, "reason": "user named a value"}
+        no_demo = re.search(r"explain_concept (\{.*\})", knowledge)  # the knowledge base has no 3D demo for it
+        if no_demo:
+            return {"tool": "explain_concept", "args": json.loads(no_demo.group(1)), "reason": "explanation only"}
         if any(w in low for w in ("teach", "lesson", "show me", "need a resistor", "need resistors")) and (
                 no_circuit or "teach" in low):
             return {"tool": "teach_led_resistor", "args": {}, "reason": "start the lesson"}

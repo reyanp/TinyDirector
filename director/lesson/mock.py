@@ -20,10 +20,14 @@ class MockDirector:
         q = messages[-1]["content"].lower() if messages[-1]["role"] == "user" else ""
         if "invalid" in q:  # corrective turn: answer with the last spec again
             q = next(m["content"].lower() for m in messages if m["role"] == "user")
+        system = messages[0]["content"]
         if any(w in q for w in ("bjt", "mosfet", "transistor")):
             spec = copy.deepcopy(BJT_MOSFET_SPEC)
         elif "led" in q or "resistor" in q:
             spec = copy.deepcopy(LED_SPEC)
+        elif "KNOWLEDGE (" in system and "EXAMPLE (for " in system:  # the knowledge base's template for this topic
+            start = system.index("):\n", system.index("EXAMPLE (for ")) + 3
+            spec = json.loads(system[start:system.index("\n\n", start)])
         else:
             spec = {"unsupported": "MOCK director only knows the LED-resistor and BJT-vs-MOSFET lessons"}
         return ModelReply(content=json.dumps(spec, ensure_ascii=False), model=self.model, live=False)

@@ -162,7 +162,7 @@ button { font: inherit; cursor: pointer; }
 /* ---------- agent activity ---------- */
 .agents { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .agents-head { display: flex; align-items: center; justify-content: space-between; }
-.agents h2 { font-size: 14px; margin: 0; letter-spacing: 0.3px; }
+.agents h2, .kmap-card h2 { font-size: 14px; margin: 0; letter-spacing: 0.3px; }
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--err); }
 .live-dot.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(79, 214, 140, 0.15); }
 .pipeline { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0; padding: 0; }
@@ -189,6 +189,59 @@ button { font: inherit; cursor: pointer; }
 .ev.error .detail { color: #ffb0b0; }
 .ev .time { font: 11px/1.6 var(--mono); color: var(--muted); white-space: nowrap; }
 @keyframes blinkdot { 50% { opacity: 0.25; } }
+
+/* ---------- grounding (what backs an answer) ---------- */
+.grounding { margin-top: 8px; font-size: 12px; color: var(--muted); white-space: normal; }
+.grounding summary { cursor: pointer; font: 11px/1.5 var(--mono); list-style: none; }
+.grounding summary::-webkit-details-marker { display: none; }
+.grounding summary::before { content: "▸ "; }
+.grounding[open] summary::before { content: "▾ "; }
+.grounding .calc { color: var(--ok); }
+.grounding .cited { color: var(--warm); }
+.grounding ul { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.grounding li { line-height: 1.4; }
+.grounding .st {
+  font: 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; margin-right: 6px; border: 1px solid var(--line);
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+.grounding .st.verified { color: var(--ok); border-color: rgba(79, 214, 140, 0.45); }
+.grounding .st.sourced { color: var(--blue); border-color: rgba(76, 178, 255, 0.45); }
+.grounding .st.assumption { color: var(--warm); border-color: rgba(255, 212, 92, 0.45); }
+.grounding a { color: var(--muted); }
+.grounding a:hover { color: var(--teal); }
+.grounding .note { margin: 6px 0 0; font-size: 11px; }
+
+/* ---------- knowledge map ---------- */
+.kmap-card { padding-bottom: 12px; }
+.kmap-note { font: 11px/1.3 var(--mono); color: var(--teal); text-align: right; max-width: 65%; }
+.kmap { width: 100%; height: auto; display: block; margin-top: 8px; }
+.kmap .edge { fill: none; stroke: #2a3b57; stroke-width: 1.2; }
+.kmap .edge.is_a { stroke-dasharray: 4 3; }
+.kmap .edge.uses { stroke-dasharray: 1 3; }
+.kmap .edge.contrasts { stroke: rgba(255, 212, 92, 0.35); stroke-dasharray: 2 4; }
+.kmap .edge.lit { stroke: var(--teal); stroke-width: 1.6; }
+.kmap .node { cursor: pointer; }
+.kmap .node rect { fill: var(--panel-2); stroke: var(--line); stroke-width: 1.2; transition: fill 0.3s, stroke 0.3s; }
+.kmap .node.interactive rect { stroke: rgba(53, 208, 192, 0.55); }
+.kmap .node.lesson rect { stroke: rgba(76, 178, 255, 0.55); }
+.kmap .node.explanation_only rect { stroke: var(--muted); stroke-dasharray: 3 3; }
+.kmap .node text { fill: var(--muted); font: 10.5px var(--sans); text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.kmap .node.discussed text { fill: var(--text); }
+.kmap .node.discussed rect { fill: #1b2a40; }
+.kmap .node.active rect { fill: rgba(53, 208, 192, 0.22); stroke: var(--teal); stroke-width: 2; }
+.kmap .node.active text { fill: #ffffff; font-weight: 600; }
+.kmap .node.active { animation: glow 1.8s ease-in-out infinite; }
+.kmap .node:hover rect { stroke: var(--teal); }
+@keyframes glow { 50% { opacity: 0.78; } }
+.kmap-legend { display: flex; flex-wrap: wrap; gap: 10px; font: 10.5px/1 var(--mono); color: var(--muted); margin-top: 6px; }
+.kmap-legend .lg {
+  display: inline-block; width: 12px; height: 8px; border-radius: 3px; margin-right: 4px; vertical-align: -1px;
+  border: 1.2px solid var(--line); background: var(--panel-2);
+}
+.kmap-legend .lg.interactive { border-color: var(--teal); }
+.kmap-legend .lg.lesson { border-color: var(--blue); }
+.kmap-legend .lg.explanation_only { border-color: var(--muted); border-style: dashed; }
+.kmap-legend .lg.now { border-color: var(--teal); background: rgba(53, 208, 192, 0.35); }
 
 /* ---------- small screens ---------- */
 @media (max-width: 1100px) {

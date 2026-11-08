@@ -45,6 +45,14 @@ http://127.0.0.1:8765. Talk to Poyo; the agent-activity panel shows the real pip
 calculation, Blender build, read-back verification). Offline: `python -m director.server --mock --simulate`
 (labeled MOCK / SIMULATED in the UI).
 
+## Knowledge base
+A SQLite knowledge base (`director/knowledge/`, built from the reviewed `seed.json`) holds concepts, prerequisites,
+cited facts, common misconceptions, demo templates and links to the calculators and verifiers. Every turn retrieves
+what is relevant for Nemotron, and the Poyo page draws the same database as a knowledge map that lights up as
+concepts are discussed. Retrieval is not verification: numbers are still checked against the calculators, and each
+answer says which facts were calculator-verified and which are only cited. `python -m director.knowledge query "..."`;
+see [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md).
+
 ## Multi-agent lessons
 Ask about another electronics idea ("Why would someone use a BJT over a MOSFET?") and an agent team builds a new
 lesson. Nemotron directs (lesson spec), calculators produce every number, an OpenAI builder writes sandboxed

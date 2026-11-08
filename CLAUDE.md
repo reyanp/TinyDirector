@@ -68,13 +68,28 @@ Worker `{"kind": "lesson"}` -> `lesson_loader.py` appends the TD_Lesson collecti
 
 ## Companion UI: Poyo (frontend/, director/server.py)
 `python -m director.server [--mock] [--simulate] [--port 8765]` -> http://127.0.0.1:8765 (stdlib http.server, localhost
-only, no new deps). Blender stays the 3D stage; the page is a companion: Poyo (`frontend/poyo.svg`, placeholder art,
-keep ids poyo-body/eyes/mouth), conversation, lesson card (server-formatted chips + Blender snapshot from the outbox),
+only, no new deps). Blender stays the 3D stage; the page is a companion: Poyo (`frontend/poyo.svg`, approved art: keep
+it and its animations; keep ids poyo-body/eyes/mouth), conversation, lesson card (server-formatted chips + Blender snapshot from the outbox),
 agent-activity panel. `director/events.py`: emit(stage, status, title, detail, /, **data); `run_turn(..., emit=, context=)`
 and `pipeline.build_lesson(..., emit=)` send REAL events only (start right before a step runs). `context` carries the
 last explanation; follow-ups (`tutor.FOLLOW_UP_RE`: simpler/again/...) re-explain it and keep the scene title.
 API: GET /api/state, POST /api/turn {text} (409 while busy), POST /api/reset, GET /api/events (SSE, ?since=), GET
-/api/snapshot/<name>. Index is served with Poyo + state inlined (no empty first paint). Tests: director/tests/test_server.py.
+/api/snapshot/<name>, GET /api/knowledge. Index is served with Poyo + state + knowledge map inlined (no empty first
+paint). Tests: director/tests/test_server.py.
+
+## Knowledge base (P1: director/knowledge/, docs/KNOWLEDGE.md)
+`seed.json` (reviewed, in git) -> SQLite `<shared>/state/knowledge.sqlite` (`TD_KNOWLEDGE_DB`; auto-rebuilt when the
+seed changes; tests use a tmp DB via conftest). `python -m director.knowledge build|stats|query "..."|graph`.
+Tables: concepts (demo = interactive/lesson/explanation_only, DERIVED from templates; parallel = explanation_only),
+aliases, relations (requires/is_a/uses/contrasts), facts (status verified = calculator re-run at build / sourced /
+assumption; every fact has a source), misconceptions (trigger regex on the question, claim regex on model text),
+templates (LED tutor + reviewed specs in `lesson/examples.py`), checks (ids only; `registry.py` is the allowlist).
+Per turn: `knowledge` event -> `<knowledge>` hint to the tool selector (new tool `explain_concept`, id validated) ->
+explainer/director get facts + misconceptions in the SYSTEM prompt; numbers are checked against calculated FACTS only
+(never retrieved knowledge); `claims.find_wrong_claims` rejects stated misconceptions (1 retry -> template). Lesson
+director uses the matched template spec as its example. Follow-ups on a generated lesson -> `explain_topic` (its own
+calculations). Turn events carry `grounding` (numbers calculated/cited/none + retrieved facts): retrieval is NOT
+verification; never label sourced facts as verified.
 
 ## Ops
 `add`, `modify` (shifts an animated channel instead of wiping it), `delete`, `animate` (2 keys; start = value the
@@ -114,6 +129,7 @@ python -m director.tutor                               # circuit tutor, interact
 python -m director.dev.circuit_e2e [--mock]            # circuit lesson end-to-end, 3 prompts, private bridge
 python -m director.lesson --text "..." [--send]        # multi-agent lesson (Nemotron director + OpenAI builder)
 python -m director.server [--mock --simulate]           # Poyo companion UI at http://127.0.0.1:8765
+python -m director.knowledge query "..."               # knowledge-base retrieval (what Nemotron is given)
 ```
 Flags: `--mock` (offline model), `--reset`, `--mode auto|create|edit`, `--manifest PATH`, `--json`, `-v`,
 `--no-verify`, `--max-corrections N`, `--timeout S`.

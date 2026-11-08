@@ -134,7 +134,9 @@ def load_cached(question: str, cache_dir: Path = CACHE) -> Lesson | None:
 
 def build_lesson(question: str, director_client, builder_client=None, vision_client=None, *,
                  use_cache: bool = True, cache_dir: Path = CACHE, runner=run_blender, log=print,
-                 emit=noop) -> Lesson:
+                 emit=noop, knowledge=None) -> Lesson:
+    """`knowledge`: retrieval from director/knowledge for this question (template example + trusted facts for
+    the director's prompt). Optional; without it the director gets the LED reference spec as its example."""
     question = " ".join(question.split())
     if use_cache:
         hit = load_cached(question, cache_dir)
@@ -153,9 +155,11 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
     t0 = time.time()
     dlabel = f"{getattr(director_client, 'model', '?')}{'' if getattr(director_client, 'live', True) else ' (MOCK)'}"
     log(f"[lesson] director {dlabel}: writing the lesson spec ...")
-    emit("director", "start", "Designing the lesson", f"{dlabel} writes the lesson spec")
+    tpl = getattr(knowledge, "template", None)
+    emit("director", "start", "Designing the lesson", f"{dlabel} writes the lesson spec"
+         + (f"; reference: {tpl['title']}" if tpl and tpl.get("spec") else ""))
     try:
-        sr = director_agent.write_spec(question, director_client)
+        sr = director_agent.write_spec(question, director_client, knowledge=knowledge)
     except director_agent.SpecError as exc:
         _save(out / "spec_errors.json", {"errors": exc.errors, "raw": [r.content for r in exc.replies]})
         emit("director", "error", "Lesson spec still invalid after one retry", "; ".join(exc.errors[:2]))

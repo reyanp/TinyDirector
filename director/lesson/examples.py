@@ -82,3 +82,55 @@ BJT_MOSFET_SPEC = {
          "caption": "The MOSFET turns on from gate voltage alone."},
     ],
 }
+
+OHMS_LAW_SPEC = {
+    "schema_version": 1,
+    "title": "Ohm's law with one resistor",
+    "question": "What is Ohm's law?",
+    "calculations": [{"id": "c", "tool": "ohms_law", "args": {"source_v": 9, "resistance_ohm": 1000}}],
+    "parts": [
+        {"id": "bat", "type": "battery", "label": "{c.V_source} battery"},
+        {"id": "r1", "type": "resistor", "label": "{c.R}"},
+    ],
+    "connections": [
+        {"id": "w1", "from": "bat.+", "to": "r1.a", "color": "red"},
+        {"id": "w2", "from": "r1.b", "to": "bat.-", "color": "black"},
+    ],
+    "flows": [{"id": "f1", "path": ["w1", "w2"], "current_ma": "{c.I_ma}", "label": "I = {c.I}"}],
+    "labels": [{"id": "l_p", "text": "turns {c.P} into heat", "near": "r1"}],
+    "key_points": ["The battery pushes with {c.V_source}; the resistor opposes the current with {c.R}.",
+                   "Ohm's law, I = V / R, gives {c.I}.",
+                   "More resistance at the same voltage means less current."],
+    "steps": [
+        {"show": ["bat", "r1"], "caption": "A battery and one resistor."},
+        {"show": ["w1", "w2", "f1", "l_p"], "caption": "Close the loop: I = V / R gives {c.I}."},
+    ],
+}
+
+VOLTAGE_DIVIDER_SPEC = {
+    "schema_version": 1,
+    "title": "How a voltage divider splits a voltage",
+    "question": "How does a voltage divider work?",
+    "calculations": [{"id": "vd", "tool": "voltage_divider", "args": {"source_v": 9, "r1_ohm": 10000, "r2_ohm": 10000}}],
+    "parts": [
+        {"id": "bat", "type": "battery", "label": "{vd.V_source} battery"},
+        {"id": "r1", "type": "resistor", "label": "R1 {vd.R1}"},
+        {"id": "r2", "type": "resistor", "label": "R2 {vd.R2}"},
+    ],
+    "connections": [
+        {"id": "w1", "from": "bat.+", "to": "r1.a", "color": "red"},
+        {"id": "w2", "from": "r1.b", "to": "r2.a", "color": "orange"},
+        {"id": "w3", "from": "r2.b", "to": "bat.-", "color": "black"},
+    ],
+    "flows": [{"id": "f1", "path": ["w1", "w2", "w3"], "current_ma": "{vd.I_ma}", "label": "I = {vd.I}"}],
+    "labels": [{"id": "l_r1", "text": "drops {vd.V_R1}", "near": "r1"},
+               {"id": "l_out", "text": "V_out = {vd.V_out}", "near": "r2"}],
+    "key_points": ["The same current, {vd.I}, flows through R1 and R2.",
+                   "R1 drops {vd.V_R1}; R2 gets the rest, the output: {vd.V_out}.",
+                   "The output is the share R2 / (R1 + R2) = {vd.ratio} of the {vd.V_source} source."],
+    "steps": [
+        {"show": ["bat", "r1", "r2"], "caption": "A battery and two resistors in series."},
+        {"show": ["w1", "w2", "w3", "f1"], "caption": "One current, {vd.I}, flows through both."},
+        {"show": ["l_r1", "l_out"], "caption": "The voltage splits: V_out = {vd.V_out}."},
+    ],
+}

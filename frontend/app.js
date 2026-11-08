@@ -8,24 +8,28 @@ const els = {
   poyo: $("poyo"), bubble: $("bubble"), chat: $("chat"), input: $("input"), send: $("send"), form: $("composer"),
   events: $("events"), pipeline: $("pipeline"), modes: $("modes"), live: $("live-dot"), reset: $("reset"),
   suggestions: $("suggestions"), title: $("lesson-title"), text: $("lesson-text"), meta: $("lesson-meta"),
-  snapWrap: $("snapshot-wrap"), snap: $("snapshot"),
+  snapWrap: $("snapshot-wrap"), snap: $("snapshot"), kmap: $("kmap"), kmapCard: $("kmap-card"),
+  kmapNote: $("kmap-note"),
 };
 
 const STAGE_LABEL = {
   understand: "understand", scene: "scene", plan: "plan", calculate: "calculate", director: "director",
   builder: "builder", blender: "blender", verify: "verify", load: "load", apply: "blender", explain: "explain",
-  turn: "done",
+  turn: "done", knowledge: "knowledge",
 };
 const PIPELINE = [
-  ["understand", ["understand", "scene"]], ["plan", ["plan"]], ["calculate", ["calculate"]],
+  ["understand", ["understand", "scene"]], ["recall", ["knowledge"]], ["plan", ["plan"]], ["calculate", ["calculate"]],
   ["build", ["director", "builder", "blender", "load", "apply"]], ["verify", ["verify"]], ["explain", ["explain"]],
 ];
 const SUGGEST_START = ["Teach me why LEDs need resistors.", "How does a voltage divider work?",
-                       "Why would someone use a BJT over a MOSFET?"];
+                       "Why would someone use a BJT over a MOSFET?", "How do parallel circuits work?"];
+const SUGGEST_TOPIC = ["Explain that in simpler terms.", "How do parallel circuits work?",
+                       "Teach me why LEDs need resistors."];
 const SUGGEST_CIRCUIT = ["What if the resistor is 1,000 Ω?", "Why did the current decrease?",
                          "Explain that in simpler terms.", "What happens if I remove the resistor?"];
 
-let state = { mode: {}, busy: false, turn: 0, messages: [], lesson: null, last_event_id: 0 };
+let state = { mode: {}, busy: false, turn: 0, messages: [], lesson: null, last_event_id: 0,
+              knowledge: { active: [], discussed: [] } };
 let renderedMessages = 0;
 let openRows = new Map();      // turn|stage|attempt -> row element still "start"
 let turnStart = new Map();     // turn -> first event time
@@ -114,6 +118,52 @@ function typeOut(target, text) {
   });
 }
 
+// What backs an answer. Retrieval is not verification: only "verified" facts were re-computed by a calculator,
+// and only numbers are machine-checked; the wording is grounded in the listed facts, not proven.
+function groundingEl(g) {
+  const facts = g.facts || [];
+  if (!facts.length && g.numbers === "none") return null;
+  const det = document.createElement("details");
+  det.className = "grounding";
+  const sum = document.createElement("summary");
+  const num = document.createElement("span");
+  num.className = g.numbers === "calculated" ? "calc" : g.numbers === "cited" ? "cited" : "";
+  num.textContent = { calculated: "✓ numbers checked against the calculation",
+                      cited: "numbers from cited sources (not calculated)", none: "no numbers to check" }[g.numbers] || "";
+  sum.append(num, document.createTextNode(facts.length ? ` · ${facts.length} knowledge-base fact${facts.length > 1 ? "s" : ""}` : ""));
+  det.appendChild(sum);
+  const ul = document.createElement("ul");
+  for (const f of facts) {
+    const li = document.createElement("li");
+    const st = document.createElement("span");
+    st.className = `st ${f.status}`;
+    st.textContent = f.status;
+    st.title = { verified: "re-computed by a calculator when the knowledge base was built",
+                 sourced: "cited to a source, not machine-checked", assumption: "a simplification this tutor's model makes" }[f.status] || "";
+    li.append(st, document.createTextNode(f.text + " "));
+    const src = f.source || {};
+    if (src.url && /^https:\/\//.test(src.url)) {
+      const a = document.createElement("a");
+      a.href = src.url; a.target = "_blank"; a.rel = "noopener noreferrer"; a.textContent = `(${src.title.split(":")[0]})`;
+      a.title = src.title;
+      li.appendChild(a);
+    } else if (src.title) {
+      const t = document.createElement("span");
+      t.textContent = "(tutor's own model)";
+      t.title = src.title;
+      li.appendChild(t);
+    }
+    ul.appendChild(li);
+  }
+  if (facts.length) det.appendChild(ul);
+  const note = document.createElement("p");
+  note.className = "note";
+  note.textContent = "Retrieved for this answer. Only numbers are machine-checked; the wording is grounded in these facts, not proven."
+    + (g.misconception_check ? " Checked against known misconceptions." : "");
+  det.appendChild(note);
+  return det;
+}
+
 async function renderMessages(animateLast) {
   if (!state.messages.length) { renderEmpty(); renderedMessages = 0; return; }
   if (renderedMessages === 0) els.chat.replaceChildren();
@@ -132,6 +182,8 @@ async function renderMessages(animateLast) {
     } else {
       body.textContent = m.text;
     }
+    const g = m.role === "tutor" && m.grounding ? groundingEl(m.grounding) : null;
+    if (g) { d.appendChild(g); els.chat.scrollTop = els.chat.scrollHeight; }
   }
 }
 
@@ -166,7 +218,8 @@ function renderLesson() {
 }
 
 function renderSuggestions() {
-  const list = state.lesson && (state.lesson.info || {}).kind === "circuit" ? SUGGEST_CIRCUIT : SUGGEST_START;
+  const kind = state.lesson && (state.lesson.info || {}).kind;
+  const list = kind === "circuit" ? SUGGEST_CIRCUIT : kind === "topic" ? SUGGEST_TOPIC : SUGGEST_START;
   els.suggestions.replaceChildren(...list.map((t) => {
     const b = document.createElement("button");
     b.type = "button";
@@ -183,6 +236,78 @@ function setBusy(busy) {
   els.input.disabled = busy;
   for (const b of els.suggestions.querySelectorAll("button")) b.disabled = busy;
   if (!busy) els.input.focus();
+}
+
+// ---------------- knowledge map (from the SQLite knowledge base) ----------------
+const SVG_NS = "http://www.w3.org/2000/svg";
+const DEMO_TEXT = { interactive: "live 3D demo", lesson: "3D lesson template", explanation_only: "explained only (no 3D demo yet)" };
+const nodeEls = new Map();
+const edgeEls = [];
+let graphNames = new Map();
+function svgEl(tag, attrs) {
+  const e = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  return e;
+}
+function renderGraph(g) {
+  nodeEls.clear(); edgeEls.length = 0;
+  if (!g || !g.nodes || !g.nodes.length) { els.kmapCard.hidden = true; return; }
+  els.kmapCard.hidden = false;
+  const W = 360, H = 232, NW = 78, NH = 22, PX = 42, PY = 16;
+  const pos = new Map(g.nodes.map((n) => [n.id, [PX + n.x * (W - 2 * PX), PY + n.y * (H - 2 * PY)]]));
+  graphNames = new Map(g.nodes.map((n) => [n.id, n.name]));
+  const edges = svgEl("g");
+  for (const e of g.edges) {
+    const [x1, y1] = pos.get(e.dst), [x2, y2] = pos.get(e.src);  // what comes first (left) -> what builds on it
+    let d;
+    if (Math.abs(x1 - x2) < 1) {  // same column: bow out to the right
+      const x = x1 + NW / 2;
+      d = `M${x} ${y1} C${x + 24} ${y1} ${x + 24} ${y2} ${x} ${y2}`;
+    } else {
+      const [a, b] = x1 < x2 ? [[x1 + NW / 2, y1], [x2 - NW / 2, y2]] : [[x1 - NW / 2, y1], [x2 + NW / 2, y2]];
+      const mx = (a[0] + b[0]) / 2;
+      d = `M${a[0]} ${a[1]} C${mx} ${a[1]} ${mx} ${b[1]} ${b[0]} ${b[1]}`;
+    }
+    const path = svgEl("path", { d, class: `edge ${e.rel}` });
+    const t = svgEl("title");
+    t.textContent = `${graphNames.get(e.src)} ${e.rel.replace("_", " ")} ${graphNames.get(e.dst)}${e.note ? ` (${e.note})` : ""}`;
+    path.appendChild(t);
+    edges.appendChild(path);
+    edgeEls.push([path, e.src, e.dst]);
+  }
+  const nodes = svgEl("g");
+  for (const n of g.nodes) {
+    const [cx, cy] = pos.get(n.id);
+    const grp = svgEl("g", { class: `node ${n.demo}`, tabindex: "0", role: "button" });
+    grp.append(svgEl("rect", { x: cx - NW / 2, y: cy - NH / 2, width: NW, height: NH, rx: 11 }));
+    const label = svgEl("text", { x: cx, y: cy });
+    label.textContent = n.short;
+    const t = svgEl("title");
+    t.textContent = `${n.name}: ${n.summary}\n${DEMO_TEXT[n.demo] || n.demo} · ${n.facts} facts (${n.verified} verified)`;
+    grp.append(label, t);
+    const ask = () => {
+      if (state.busy) return;
+      els.input.value = `What is ${n.name.replace(/ \(.*\)$/, "")}?`;
+      els.input.focus();
+      setMood("listening");
+    };
+    grp.addEventListener("click", ask);
+    grp.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ask(); } });
+    nodes.appendChild(grp);
+    nodeEls.set(n.id, grp);
+  }
+  els.kmap.replaceChildren(edges, nodes);
+  highlightGraph();
+}
+function highlightGraph() {
+  const k = state.knowledge || { active: [], discussed: [] };
+  const active = new Set(k.active || []), discussed = new Set(k.discussed || []);
+  for (const [id, grp] of nodeEls) {
+    grp.classList.toggle("active", active.has(id));
+    grp.classList.toggle("discussed", discussed.has(id));
+  }
+  for (const [path, a, b] of edgeEls) path.classList.toggle("lit", active.has(a) && (active.has(b) || discussed.has(b)));
+  els.kmapNote.textContent = [...active].map((id) => graphNames.get(id) || id).join(" · ");
 }
 
 // ---------------- agent activity ----------------
@@ -251,6 +376,10 @@ function addEvent(ev) {
 async function onEvent(ev) {
   addEvent(ev);
   if (ev.turn !== state.turn) return;
+  if (ev.stage === "knowledge" && (ev.status === "ok" || ev.status === "info")) {
+    state.knowledge = { ...state.knowledge, active: ((ev.data || {}).concepts || []).map((c) => c.id) };
+    highlightGraph();
+  }
   if (ev.stage === "turn") {
     await refresh(true);
     return;
@@ -269,6 +398,7 @@ async function refresh(animate) {
   renderModes();
   renderLesson();
   renderSuggestions();
+  highlightGraph();
   setBusy(s.busy);
   await renderMessages(animate && wasBusy);
   if (!s.busy && mood !== "success" && mood !== "error" && mood !== "speaking") { setMood("idle"); }
@@ -315,6 +445,7 @@ els.reset.addEventListener("click", async () => {
 
 function applyState(s) {
   state = { ...state, ...s };
+  renderGraph(s.graph);
   renderModes();
   renderLesson();
   renderSuggestions();
@@ -326,7 +457,11 @@ function applyState(s) {
 
 (async function init() {
   if (window.__POYO_STATE__) applyState(window.__POYO_STATE__);   // first paint without waiting
-  else { setMood("idle"); await refresh(false); }
+  else {
+    setMood("idle");
+    await refresh(false);
+    try { const r = await fetch("/api/knowledge"); renderGraph(r.ok ? await r.json() : null); } catch (e) { renderGraph(null); }
+  }
   for (const ev of (state.events || [])) addEvent(ev);
   connect();
   await loadPoyo();

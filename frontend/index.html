@@ -51,6 +51,20 @@
 
     <!-- right: what the agents are actually doing -->
     <section class="col col-agents" aria-label="Agent activity">
+      <div class="card kmap-card" id="kmap-card">
+        <div class="agents-head">
+          <h2>Knowledge map</h2>
+          <span class="kmap-note" id="kmap-note"></span>
+        </div>
+        <svg class="kmap" id="kmap" viewBox="0 0 360 232" role="img"
+             aria-label="Concepts and prerequisites from the tutor's knowledge base"></svg>
+        <div class="kmap-legend" aria-hidden="true">
+          <span><i class="lg interactive"></i>live demo</span>
+          <span><i class="lg lesson"></i>3D lesson</span>
+          <span><i class="lg explanation_only"></i>explained only</span>
+          <span><i class="lg now"></i>this answer</span>
+        </div>
+      </div>
       <div class="card agents">
         <div class="agents-head">
           <h2>Agent activity</h2>

@@ -51,14 +51,23 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mock", action="store_true", help="offline MOCK director (and MOCK builder without a key)")
     ap.add_argument("--timeout", type=float, default=60.0, help="seconds to wait for Blender when --send")
     ap.add_argument("--json", action="store_true", help="print the lesson record as JSON")
+    ap.add_argument("--no-knowledge", action="store_true", help="do not give the director knowledge-base context")
     args = ap.parse_args(argv)
     try:
         director, builder, vision = make_clients(args.mock, args.builder, not args.no_vision)
     except ConfigError as exc:
         print(f"CONFIG ERROR: {exc}", file=sys.stderr)
         return 2
+    knowledge = None
+    if not args.no_knowledge:
+        from ..knowledge import get_kb
+        knowledge = get_kb().retrieve(args.text)
+        if knowledge.concepts:
+            print(f"[knowledge] {', '.join(c['name'] for c in knowledge.concepts)}; {len(knowledge.facts)} facts"
+                  + (f"; reference spec: {knowledge.template['title']}" if knowledge.template else ""))
     try:
-        lesson = pipeline.build_lesson(args.text, director, builder, vision, use_cache=not args.no_cache)
+        lesson = pipeline.build_lesson(args.text, director, builder, vision, use_cache=not args.no_cache,
+                                       knowledge=knowledge)
     except ModelCallError as exc:
         print(f"MODEL CALL FAILED: {exc}", file=sys.stderr)
         return 1

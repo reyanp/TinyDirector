@@ -8,7 +8,8 @@ Blender side: `blender --python blender_engine/worker.py` (same as the scene dir
 A question about a different electronics idea -> teach_topic -> multi-agent lesson (director/lesson/,
 docs/MULTI_AGENT.md): Nemotron director spec -> builder code -> sandboxed Blender build -> verifier -> load.
 
-Each turn:  inspect Blender (the circuit it actually shows)  ->  Nemotron picks ONE tool (validated,
+Each turn:  inspect Blender (the circuit it actually shows)  ->  knowledge base lookup (concepts, trusted
+facts, misconceptions, which demo exists; director/knowledge/)  ->  Nemotron picks ONE tool (validated,
 max 1 retry)  ->  director/circuit/model.py calculates  ->  Nemotron explains the calculated facts
 (numbers checked)  ->  circuit_request_v1 to Blender  ->  read-back checked against the calculation.
 
@@ -29,7 +30,7 @@ from jsonschema import Draft202012Validator
 from . import bridge, paths
 from .circuit import check
 from .events import noop
-from .circuit.agent import ToolError, choose_tool, describe_state, explain, facts_for
+from .circuit.agent import ToolError, _tokens, choose_tool, describe_state, explain, facts_for
 from .circuit.display import circuit_request, equation_text, title_for
 from .circuit.model import LedCircuit, check_resistance, format_ma, format_ohms, solve
 from .nemotron_client import ConfigError, ModelCallError, NemotronClient
@@ -71,6 +72,45 @@ FOLLOW_UP_RE = re.compile(r"\b(simpler|simply|again|rephrase|repeat|eli5|another
                           r"didn'?t (get|understand)|what do you mean|explain (that|it|this)|in other words)\b", re.I)
 
 
+def _retrieve(text: str, context: dict, follow_up: bool, emit, trace: Trace):
+    """(knowledge base, Knowledge) or (None, None) when the knowledge base is unavailable (the turn goes on)."""
+    from .knowledge import get_kb
+    emit("knowledge", "start", "Looking up the knowledge base", "concepts, trusted facts, misconceptions (SQLite)")
+    try:
+        kb = get_kb()
+        kn = kb.retrieve(text, prior=context.get("concepts", []), follow_up=follow_up)
+    except Exception as exc:  # noqa: BLE001 - knowledge is an aid; the calculated lesson still works without it
+        trace.add("knowledge", f"knowledge base unavailable: {type(exc).__name__}: {exc}")
+        emit("knowledge", "error", "Knowledge base unavailable", f"{type(exc).__name__}: {exc}"[:300])
+        return None, None
+    names = ", ".join(c["name"] for c in kn.concepts)
+    trace.add("knowledge", f"{names or 'no concept matched'}; {len(kn.facts)} facts, {len(kn.misconceptions)} "
+                           f"misconceptions" + (" (from the previous turn)" if kn.from_context else ""))
+    emit("knowledge", "ok" if kn.concepts else "info",
+         f"{len(kn.concepts)} concept(s), {len(kn.facts)} fact(s)" if kn.concepts else "No matching concept",
+         names + (" (carried over from the last turn)" if kn.from_context else ""), **kn.summary())
+    return kb, kn
+
+
+def _claim_check(kb):
+    if kb is None:
+        return None
+    return lambda text: [f"{w['sentence']!r} (correct: {w['correction']})" for w in kb.wrong_claims(text)]
+
+
+def _grounding(kn, expl, numbers_from: str, kb=None, given: list[str] | None = None) -> dict:
+    """What backs a reply, stated honestly for the UI:
+    numbers: "calculated" (every number matched a calculator result), "cited" (numbers come from cited
+    knowledge-base facts, nothing was calculated) or "none"; facts: what was RETRIEVED and given to the model
+    (retrieval is not verification: only facts with status "verified" were re-computed by a calculator)."""
+    summary = kn.summary() if kn is not None else {}
+    quantities = _tokens(re.sub(r"\b[23]-?D\b", "", expl.text))  # "3D scene" is not a numeric claim
+    return {"numbers": numbers_from if quantities else "none",
+            "number_check": True, "misconception_check": kb is not None and expl.source != "template",
+            "concepts": summary.get("concepts", []), "facts": summary.get("facts", []),
+            "given_as_facts": given or [], "misconceptions": [m["id"] for m in summary.get("misconceptions", [])]}
+
+
 def _fail(emit, stage: str, message: str, code: int) -> int:
     emit(stage, "error", message.split(":")[0], message)
     emit("turn", "error", "Turn failed", message, code=code)
@@ -99,9 +139,11 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
     emit("scene", "ok", "Scene read", f"{_executor_name(before)}: {describe_state(current)}",
          executor=_executor_name(before), simulated=before.get("executor") == "simulated")
 
+    follow_up_text = bool(FOLLOW_UP_RE.search(text))
+    kb, kn = _retrieve(text, context, follow_up_text, emit, trace)
     emit("plan", "start", "Choosing what to do", f"{'Nemotron' if client.live else 'MOCK model'} picks one tool")
     try:
-        call = choose_tool(text, client, current, history, trace)
+        call = choose_tool(text, client, current, history, trace, knowledge=kn)
     except ToolError as exc:
         print("TOOL CALL REJECTED - nothing was executed.", file=sys.stderr)
         for e in exc.errors:
@@ -126,7 +168,19 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
              scene_changed=False)
         return 0
     if call.tool == "teach_topic":
-        return teach_topic(call.args["question"], client, executor, trace, show_trace, emit=emit, context=context)
+        return teach_topic(call.args["question"], client, executor, trace, show_trace, emit=emit, context=context,
+                           kb=kb, kn=kn)
+    if call.tool == "explain_concept" or (call.tool == "explain" and follow_up_text
+                                          and context.get("last_kind") == "concept" and context.get("concept")):
+        concept = call.args.get("concept") or context["concept"]
+        return explain_concept(concept, text, client, kb, kn, trace, emit, context, follow_up_text)
+    # a generated lesson is on stage: Blender shows it (the lesson load cleared the circuit), or, with the
+    # SIMULATED engine (which cannot display lessons), the conversation moved to it after the last circuit turn
+    topic_on_stage = bool(context.get("topic")) and (
+        (current is None and bool(before.get("lesson")))
+        or (before.get("executor") == "simulated" and context.get("last_kind") != "circuit"))
+    if call.tool == "explain" and topic_on_stage:
+        return explain_topic(text, client, kb, kn, trace, emit, context, follow_up_text)
 
     base = current or LedCircuit()
     target = base
@@ -158,7 +212,7 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
              if before_sol and current.resistance_ohm != target.resistance_ohm else ""))
 
     facts = facts_for(call, text, before_sol, after_sol, built=action == "build")
-    follow_up = call.tool == "explain" and bool(FOLLOW_UP_RE.search(text))
+    follow_up = call.tool == "explain" and follow_up_text
     if context.get("last_explanation") and call.tool == "explain":
         facts["previous_explanation"] = context["last_explanation"]  # "simpler, please" / "why did it ...?"
         if follow_up:
@@ -167,7 +221,7 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
                                       "do not say that nothing changed")
     emit("explain", "start", "Writing the explanation", "numbers are checked against the calculation")
     try:
-        expl = explain(facts, client, trace)
+        expl = explain(facts, client, trace, knowledge=kn.prompt_block() if kn else "", claim_check=_claim_check(kb))
     except ModelCallError as exc:
         from .circuit.agent import Explanation, template_explanation
         trace.add("explain", f"model call failed ({exc}); using the deterministic template")
@@ -232,19 +286,105 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
     if show_trace:
         print("\n" + trace.render())
     context["last_explanation"] = expl.text
+    context["last_kind"] = "circuit"
+    _remember_concepts(context, kn)
     if action is not None:
+        context.pop("topic", None)
         context["lesson"] = {"kind": "circuit", "title": title, "resistance_ohm": target.resistance_ohm,
                              "current_ma": round(after_sol.current_ma, 3),
                              "chips": [f"R = {format_ohms(target.resistance_ohm)}", f"I = {format_ma(after_sol.current_ma)}",
                                        equation_text(after_sol)]}  # formatted by the calculation module
     emit("turn", "ok" if code == 0 else "error", "Done" if code == 0 else "Scene does not match the calculation",
          "", reply=expl.text, source=expl.source, title=title if action is not None else None, snapshot=snapshot,
-         scene_changed=action is not None, lesson=context.get("lesson"), code=code)
+         scene_changed=action is not None, lesson=context.get("lesson"), code=code,
+         grounding=_grounding(kn, expl, "calculated", kb))
     return code
 
 
+def _remember_concepts(context: dict, kn) -> None:
+    if kn is not None and kn.ids:
+        context["concepts"] = kn.ids
+
+
+def _explain_only(facts: dict, client, kb, kn, trace: Trace, emit, stage_detail: str):
+    emit("explain", "start", "Writing the explanation", stage_detail)
+    try:
+        expl = explain(facts, client, trace, knowledge=kn.prompt_block() if kn else "", claim_check=_claim_check(kb))
+    except ModelCallError as exc:
+        from .circuit.agent import Explanation, template_explanation
+        trace.add("explain", f"model call failed ({exc}); using the facts as the answer")
+        expl = Explanation(template_explanation(facts), "template")
+    emit("explain", "ok", {"nemotron": "Explanation ready", "mock": "MOCK explanation ready",
+                           "template": "Template answer (model text failed the checks)"}[expl.source],
+         "", source=expl.source, attempts=expl.attempts)
+    return expl
+
+
+def explain_concept(concept: str, text: str, client, kb, kn, trace: Trace, emit=noop, context: dict | None = None,
+                    follow_up: bool = False) -> int:
+    """A concept answered from the knowledge base, with no scene change (e.g. parallel circuits, which has no
+    calculator or 3D demo yet). Numbers in the answer can only come from cited facts, and are labeled so."""
+    context = context if context is not None else {}
+    if kb is None:
+        reply = "My knowledge base is unavailable right now, so I can't answer that one reliably."
+        emit("turn", "ok", "Answered", "", reply=reply, source="template", scene_changed=False)
+        return 0
+    k = kn if kn is not None and kn.ids[:1] == [concept] else kb.for_concepts([concept], text)
+    c = k.concepts[0]
+    given = [f for f in k.facts if f["concept"] == concept][:3]
+    facts = {"question": text, "concept": c["name"], "key_points": [f["text"] for f in given],
+             "demo": ("there is no 3D demo for this concept yet; the Blender scene does not change"
+                      if c["demo"] == "explanation_only" else "the Blender scene does not change for this answer"),
+             "teaching_goal": "explain the concept to a beginner in 2 or 3 short sentences using key_points; if "
+                              "there is no 3D demo, say in a few words that this one is explained, not shown"}
+    if follow_up and context.get("last_explanation"):
+        facts["previous_explanation"] = context["last_explanation"]
+        facts["teaching_goal"] = ("the learner is reacting to previous_explanation: re-explain THAT idea the way they "
+                                  "ask (e.g. simpler words, an everyday analogy), using only these facts")
+    trace.add("plan", f"explain_concept {concept}: {len(given)} knowledge-base facts")
+    expl = _explain_only(facts, client, kb, k, trace, emit, f"from the knowledge base: {c['name']}")
+    emit("apply", "info", "No scene change", facts["demo"])
+    label = {"nemotron": "", "mock": " [MOCK explanation]", "template": " [knowledge-base facts]"}[expl.source]
+    print(f"\nTutor{label}: {expl.text}")
+    trace.save()
+    context.update(last_explanation=expl.text, last_kind="concept", concept=concept, concepts=[concept])
+    emit("turn", "ok", "Done", "", reply=expl.text, source=expl.source, title=None, scene_changed=False,
+         lesson=context.get("lesson"), code=0, grounding=_grounding(k, expl, "cited", kb, [f["id"] for f in given]))
+    return 0
+
+
+def explain_topic(text: str, client, kb, kn, trace: Trace, emit=noop, context: dict | None = None,
+                  follow_up: bool = False) -> int:
+    """A question about the generated lesson on screen, answered from ITS calculated facts (no scene change)."""
+    context = context if context is not None else {}
+    t = context["topic"]
+    facts = {"question": text, "lesson_title": t["title"], "key_points": t["key_points"],
+             "calculations": t["calculations"],
+             "teaching_goal": "answer the learner's question about the lesson on screen using only these facts; "
+                              "the 3D scene does not change"}
+    if follow_up and context.get("last_explanation"):
+        facts["previous_explanation"] = context["last_explanation"]
+        facts["teaching_goal"] = ("the learner is reacting to previous_explanation: re-explain THAT idea the way they "
+                                  "ask (e.g. simpler words, an everyday analogy), using only these facts")
+    if kb is not None and t.get("concepts"):  # the lesson on screen first, then what the question names
+        asked = kn.ids if kn is not None else []
+        ids = [c for c in asked if c in t["concepts"]] + t["concepts"] + asked
+        kn = kb.for_concepts(list(dict.fromkeys(ids)), text)
+    trace.add("plan", f"question about the lesson on screen: {t['title']!r}")
+    expl = _explain_only(facts, client, kb, kn, trace, emit, f"from the lesson's calculations: {t['title']}")
+    emit("apply", "info", "No scene change", f"the lesson on screen: {t['title']}")
+    label = {"nemotron": "", "mock": " [MOCK explanation]", "template": " [lesson key points]"}[expl.source]
+    print(f"\nTutor{label}: {expl.text}")
+    trace.save()
+    context.update(last_explanation=expl.text, last_kind="topic")
+    _remember_concepts(context, kn)
+    emit("turn", "ok", "Done", "", reply=expl.text, source=expl.source, title=None, scene_changed=False,
+         lesson=context.get("lesson"), code=0, grounding=_grounding(kn, expl, "calculated", kb))
+    return 0
+
+
 def teach_topic(question: str, client, executor, trace: Trace, show_trace: bool = False, emit=noop,
-                context: dict | None = None) -> int:
+                context: dict | None = None, kb=None, kn=None) -> int:
     """A new topic: director (Nemotron) spec -> builder agent code -> sandboxed Blender build -> verifier ->
     load the verified lesson into Blender -> explain from the calculated facts."""
     from .lesson import pipeline
@@ -258,7 +398,7 @@ def teach_topic(question: str, client, executor, trace: Trace, show_trace: bool 
     trace.add("plan", f"new topic -> lesson agents (director {director.model}, builder "
                       f"{getattr(builder, 'model', 'deterministic')}): {question!r}")
     try:
-        lesson = pipeline.build_lesson(question, director, builder, vision, emit=emit)
+        lesson = pipeline.build_lesson(question, director, builder, vision, emit=emit, knowledge=kn)
     except ModelCallError as exc:
         print(f"MODEL CALL FAILED: {exc}", file=sys.stderr)
         trace.save()
@@ -305,7 +445,7 @@ def teach_topic(question: str, client, executor, trace: Trace, show_trace: bool 
                               "shows the circuit and the current arrows; note the model's assumptions if relevant"}
     emit("explain", "start", "Writing the explanation", "numbers are checked against the calculation")
     try:
-        expl = explain(facts, client, trace)
+        expl = explain(facts, client, trace, knowledge=kn.prompt_block() if kn else "", claim_check=_claim_check(kb))
     except ModelCallError as exc:
         from .circuit.agent import Explanation, template_explanation
         trace.add("explain", f"model call failed ({exc}); using the lesson's key points")
@@ -318,11 +458,16 @@ def teach_topic(question: str, client, executor, trace: Trace, show_trace: bool 
     if show_trace:
         print("\n" + trace.render())
     context["last_explanation"] = expl.text
+    context["last_kind"] = "topic"
+    _remember_concepts(context, kn)
+    context["topic"] = {"title": lesson.resolved["title"], "key_points": lesson.resolved["key_points"],
+                        "calculations": facts["calculations"], "concepts": kn.ids if kn is not None else []}
     context["lesson"] = {"kind": "topic", "title": lesson.resolved["title"], "key_points": lesson.resolved["key_points"],
                          "builder": lesson.builder, "cached": lesson.cached}
     emit("turn", "ok", "Done", "", reply=expl.text, source=expl.source, title=lesson.resolved["title"],
          snapshot=snapshot, scene_changed=True, lesson=context["lesson"],
-         preview=str(lesson.preview) if lesson.preview.exists() else None, code=0)
+         preview=str(lesson.preview) if lesson.preview.exists() else None, code=0,
+         grounding=_grounding(kn, expl, "calculated", kb))
     return 0
 
 

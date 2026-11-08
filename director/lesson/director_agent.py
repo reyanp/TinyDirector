@@ -80,16 +80,28 @@ RULES:
   appear as parts, each in its own sub-circuit with "group", side by side.
 - If no calculator and part type can show the idea honestly, reply {{"unsupported": "one sentence why"}}.
 
-EXAMPLE (for "Why does an LED need a resistor?"):
+EXAMPLE (for "{example_question}"):
 {example}
 
-Reply with the JSON object only."""
+{knowledge}Reply with the JSON object only."""
+
+KNOWLEDGE_HEADER = """KNOWLEDGE (trusted, from the tutor's knowledge base). Ground key_points and labels in these facts and
+never state a listed misconception. Numbers still come ONLY from calculator placeholders.
+"""
 
 
-def messages_for(question: str) -> list[dict]:
-    return [{"role": "system", "content": SYSTEM_PROMPT.format(parts=_parts(), calcs=catalog_text(),
-                                                               example=json.dumps(LED_SPEC, ensure_ascii=False))},
-            {"role": "user", "content": f"Learner's question: {question}"}]
+def messages_for(question: str, knowledge=None) -> list[dict]:
+    """`knowledge` (director.knowledge.Knowledge, optional): its lesson template becomes the example (the closest
+    reviewed spec for this topic) and its facts / misconceptions are added as trusted background."""
+    example = LED_SPEC
+    tpl = getattr(knowledge, "template", None)
+    if tpl and tpl.get("spec"):
+        example = tpl["spec"]
+    block = knowledge.prompt_block() if knowledge is not None else ""
+    system = SYSTEM_PROMPT.format(parts=_parts(), calcs=catalog_text(), example=json.dumps(example, ensure_ascii=False),
+                                  example_question=example["question"].replace("{", "(").replace("}", ")"),
+                                  knowledge=f"{KNOWLEDGE_HEADER}{block}\n\n" if block else "")
+    return [{"role": "system", "content": system}, {"role": "user", "content": f"Learner's question: {question}"}]
 
 
 def check(spec) -> tuple[list[str], list[str]]:
@@ -105,11 +117,11 @@ def check(spec) -> tuple[list[str], list[str]]:
     return errs, warns
 
 
-def write_spec(question: str, client, max_tokens: int = 6000) -> SpecResult:
+def write_spec(question: str, client, max_tokens: int = 6000, knowledge=None) -> SpecResult:
     question = question.strip()
     if not question:
         raise ValueError("empty question")
-    messages = messages_for(question)
+    messages = messages_for(question, knowledge)
     replies: list[ModelReply] = []
     errors: list[str] = []
     for attempt in (1, 2):
