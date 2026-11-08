@@ -8,6 +8,9 @@ HackUTD 2026 project.
 - `shared/schema/*.json` and `shared/fixtures/*.json` are the contract between the director and the Blender engine. Do not change them without the team agreeing; fix code instead.
 - `director/` = Nemotron planning lane. `blender_engine/` = Blender executor (runs inside Blender's Python: no jsonschema/openai there).
 - Plans are DATA. Never eval/exec model output. Max ONE corrective retry, then fail without executing.
+  Sole exception (team-approved): lesson builder code runs ONLY via `blender_engine/sandbox.py` (AST allowlist,
+  no imports / attribute access) inside a separate headless Blender (`lesson_runner.py`) with a timeout; the user's
+  Blender only appends data from a verified `lesson.blend`.
 - Never print, log, or commit API keys. Keys live in the gitignored `.env`.
 - Tests must pass offline: `python -m pytest director/tests -q`.
 - Anything mocked or simulated must be labeled MOCK / SIMULATED in output. Never present it as a live Nemotron call or real Blender.
@@ -50,6 +53,18 @@ Bridge: `{"kind": "circuit"}` requests (`shared/schema/circuit_request_v1.json`,
 (build / update on stable ids `battery_1 resistor_1 led_1 wire_1..3 flow_1 board_1 label_*`; flow = Geometry Nodes
 markers, `modifiers["Flow"].properties.inputs.Socket_N.value` in Blender 5.x). Docs: `docs/CIRCUIT_TUTOR.md`.
 Checks: `blender -b --factory-startup --python blender_engine/circuit_check.py`, `python -m director.dev.circuit_e2e [--mock]`.
+Scene title follows the turn (`display.title_for`): lesson question / "What if the resistor is X?" / the learner's question.
+
+## Multi-agent lessons (any small electronics question; docs/MULTI_AGENT.md)
+Tutor tool `teach_topic` or `python -m director.lesson --text "..." [--send] [--builder auto|openai|deterministic]
+[--no-cache] [--no-vision] [--mock]`. Nemotron `director_agent.py` writes `lesson_spec_v1` (additive schema;
+`spec.py` validates refs/pins/flows, no bare numbers, lint: calc `shown_on` parts present, LED series resistor, no
+flow through a capacitor) -> `calculators.py` fill `{calc.output}` -> OpenAI `builder.py` (OPENAI_API_KEY in `.env`)
+writes toolkit code (`blender_engine/toolkit.py` API, names in `builder.TOOLKIT_NAMES`, test keeps them equal) ->
+`pipeline.run_blender` (separate `blender -b`) -> `verify.py` (pins within 2 cm, flow current + speed, texts, layout,
+Nemotron VL) -> 1 repair -> `fallback.py` deterministic builder (layout = warnings). Cache: `<shared>/state/lesson_cache/`.
+Worker `{"kind": "lesson"}` -> `lesson_loader.py` appends the TD_Lesson collection (path must be a cache
+`lesson.blend`), director re-verifies the live read-back. Circuit build clears the lesson and vice versa.
 
 ## Ops
 `add`, `modify` (shifts an animated channel instead of wiping it), `delete`, `animate` (2 keys; start = value the
@@ -87,6 +102,7 @@ python -m director.dev.phase1_e2e [--mock]             # Phase 1 end-to-end; OVE
 python -m director.dev.library_e2e [--mock]            # asset-library end-to-end (needs built library)
 python -m director.tutor                               # circuit tutor, interactive (Blender worker running)
 python -m director.dev.circuit_e2e [--mock]            # circuit lesson end-to-end, 3 prompts, private bridge
+python -m director.lesson --text "..." [--send]        # multi-agent lesson (Nemotron director + OpenAI builder)
 ```
 Flags: `--mock` (offline model), `--reset`, `--mode auto|create|edit`, `--manifest PATH`, `--json`, `-v`,
 `--no-verify`, `--max-corrections N`, `--timeout S`.
@@ -96,3 +112,5 @@ Exit codes: 0 ok/clarify · 1 model call failed · 2 config · 3 plan invalid af
 `NVIDIA_API_KEY`, `NEMOTRON_MODEL` (default `nvidia/nemotron-3.5-super-vl-120b-a12b`), `NEMOTRON_BASE_URL`
 (default `https://integrate.api.nvidia.com/v1`), `NEMOTRON_THINKING` (0), `NEMOTRON_TIMEOUT` (90), `NEMOTRON_VL_MODEL`,
 `TINYDIRECTOR_ROOT` (worker repo-root override), `TD_SNAPSHOT`, `TD_SHARED_DIR`.
+Lesson builder: `OPENAI_API_KEY` (empty -> deterministic builder, labeled), `OPENAI_BUILDER_MODEL` (gpt-5),
+`OPENAI_BASE_URL`, `OPENAI_TIMEOUT` (180), `OPENAI_REASONING_EFFORT`; `BLENDER` = path to blender if not on PATH.

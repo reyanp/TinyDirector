@@ -5,6 +5,9 @@
   python -m director.tutor --simulate --mock --text "..."                 # offline: SIMULATED + MOCK
 Blender side: `blender --python blender_engine/worker.py` (same as the scene director).
 
+A question about a different electronics idea -> teach_topic -> multi-agent lesson (director/lesson/,
+docs/MULTI_AGENT.md): Nemotron director spec -> builder code -> sandboxed Blender build -> verifier -> load.
+
 Each turn:  inspect Blender (the circuit it actually shows)  ->  Nemotron picks ONE tool (validated,
 max 1 retry)  ->  director/circuit/model.py calculates  ->  Nemotron explains the calculated facts
 (numbers checked)  ->  circuit_request_v1 to Blender  ->  read-back checked against the calculation.
@@ -25,7 +28,7 @@ from jsonschema import Draft202012Validator
 from . import bridge, paths
 from .circuit import check
 from .circuit.agent import ToolError, choose_tool, describe_state, explain, facts_for
-from .circuit.display import circuit_request, equation_text
+from .circuit.display import circuit_request, equation_text, title_for
 from .circuit.model import LedCircuit, check_resistance, format_ma, format_ohms, solve
 from .nemotron_client import ConfigError, ModelCallError, NemotronClient
 from .planner import new_request_id
@@ -94,6 +97,8 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
         trace.add("execute", "skipped: request is outside the lesson")
         trace.save()
         return 0
+    if call.tool == "teach_topic":
+        return teach_topic(call.args["question"], client, executor, trace, show_trace)
 
     base = current or LedCircuit()
     target = base
@@ -126,7 +131,7 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
 
     code = 0
     if action is not None:
-        req = circuit_request(rid, action, target, caption=expl.text)
+        req = circuit_request(rid, action, target, caption=expl.text, title=title_for(call.tool, text, target))
         errs = validate_request(req)
         if errs:  # our own bug, never send it
             print("INTERNAL: circuit request failed circuit_request_v1:", *errs, sep="\n  ", file=sys.stderr)
@@ -171,6 +176,72 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
     return code
 
 
+def teach_topic(question: str, client, executor, trace: Trace, show_trace: bool = False) -> int:
+    """A new topic: director (Nemotron) spec -> builder agent code -> sandboxed Blender build -> verifier ->
+    load the verified lesson into Blender -> explain from the calculated facts."""
+    from .lesson import pipeline
+    from .lesson.agents import make_clients, send_to_blender
+    try:
+        director, builder, vision = make_clients(not client.live, "auto", True)
+    except ConfigError as exc:
+        print(f"CONFIG ERROR: {exc}", file=sys.stderr)
+        return 2
+    trace.add("plan", f"new topic -> lesson agents (director {director.model}, builder "
+                      f"{getattr(builder, 'model', 'deterministic')}): {question!r}")
+    try:
+        lesson = pipeline.build_lesson(question, director, builder, vision)
+    except ModelCallError as exc:
+        print(f"MODEL CALL FAILED: {exc}", file=sys.stderr)
+        trace.save()
+        return 1
+    except pipeline.LessonError as exc:
+        print(f"LESSON FAILED (nothing was loaded): {exc}", file=sys.stderr)
+        trace.save()
+        return 3 if "spec invalid" in str(exc) else 5
+    if lesson.unsupported:
+        print(f"\nTutor: I can't build an honest 3D lesson for that yet: {lesson.unsupported}")
+        trace.save()
+        return 0
+    trace.add("verify", f"{lesson.builder}: {lesson.report.summary()}" + (" (cached)" if lesson.cached else ""))
+    print(f"[lesson] {lesson.resolved['title']!r} built by {lesson.builder}"
+          f"{' (cached)' if lesson.cached else ''}; verifier: {lesson.report.summary()}")
+    for n in lesson.notes:
+        print(f"  note: {n}")
+    if isinstance(executor, BridgeExecutor):
+        try:
+            send_to_blender(lesson, executor.timeout)
+        except bridge.BridgeTimeout as exc:
+            print(f"BRIDGE TIMEOUT: {exc}", file=sys.stderr)
+            trace.save()
+            return 4
+        except pipeline.LessonError as exc:
+            print(f"LOAD FAILED: {exc}", file=sys.stderr)
+            trace.save()
+            return 5
+    else:
+        print(f"[SIMULATED engine - the verified lesson was built in headless Blender but is not displayed: "
+              f"{lesson.preview}]")
+    facts = {"question": question, "lesson_title": lesson.resolved["title"],
+             "key_points": lesson.resolved["key_points"],
+             "calculations": {cid: {k: v for k, v in r.items() if not k.endswith("_ma")}
+                              for cid, r in (lesson.results or {}).items()},
+             "teaching_goal": "answer the learner's question with this lesson's facts; mention that the 3D scene "
+                              "shows the circuit and the current arrows; note the model's assumptions if relevant"}
+    try:
+        expl = explain(facts, client, trace)
+    except ModelCallError as exc:
+        from .circuit.agent import Explanation, template_explanation
+        trace.add("explain", f"model call failed ({exc}); using the lesson's key points")
+        expl = Explanation(template_explanation(facts), "template")
+    label = {"nemotron": "", "mock": " [MOCK explanation]",
+             "template": " [lesson key points: model text failed the number check]"}[expl.source]
+    print(f"\nTutor{label}: {expl.text}")
+    trace.save()
+    if show_trace:
+        print("\n" + trace.render())
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     paths.load_env()
     ap = argparse.ArgumentParser(prog="python -m director.tutor", description=__doc__,
@@ -206,7 +277,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.text:
         return run_turn(args.text, client, executor, history, args.trace)
     print("Circuit tutor: 'Why does an LED need a resistor?'  Try: \"Teach me why LEDs need resistors.\", "
-          "\"Change the resistor to 1,000 ohms.\", \"Put it back to 330 ohms.\"  Type 'quit' to exit.")
+          "\"Change the resistor to 1,000 ohms.\", \"Put it back to 330 ohms.\", or a new topic: \"Why would someone use "
+          "a BJT over a MOSFET?\"  Type 'quit' to exit.")
     code = 0
     while True:
         try:

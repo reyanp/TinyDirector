@@ -132,7 +132,10 @@ def validate(spec) -> tuple[list[str], list[str]]:
                 errs.append(f"{where}: placeholder {m.group(0)} names no calculation")
             elif m.group(2) not in CALCULATORS.get(calc_ids[m.group(1)]["tool"], {}).get("outputs", []):
                 errs.append(f"{where}: {m.group(0)} is not an output of {calc_ids[m.group(1)]['tool']}")
-        bare = BARE_NUMBER.findall(PLACEHOLDER.sub("", text))
+        doubled = re.findall(r"\}\s*(?:V|mA|A|Ω|kΩ|ohms?|volts?|W|mW)(?![A-Za-z])", text)
+        if doubled:
+            errs.append(f"{where}: placeholder values already include their unit; remove the unit after it in {text!r}")
+        bare = [n for n in BARE_NUMBER.findall(PLACEHOLDER.sub("", text)) if n != "0"]  # "0 V rail", "~0 A" are fine
         if bare:
             errs.append(f"{where}: numbers must come from calculator placeholders, found {bare} in {text!r}")
     if not errs:
@@ -140,9 +143,52 @@ def validate(spec) -> tuple[list[str], list[str]]:
     return errs, warns
 
 
+ASKED_PARTS = [(("mosfet", "mosfets", "fet", "fets"), "n_mosfet"), (("bjt", "bjts"), "npn_bjt"),
+               (("capacitor", "capacitors"), "capacitor"), (("led", "leds"), "led")]
+
+
 def lint(spec: dict) -> list[str]:
-    """Physics sanity that does not need a solver."""
+    """Physics sanity that does not need a solver, and calculation <-> drawn circuit consistency."""
     nets, errs = _nets(spec), []
+    types = {p["type"] for p in spec["parts"]}
+    for c in spec["calculations"]:  # every resistor / supply the calculation assumes must be in the scene
+        for out, need in CALCULATORS[c["tool"]].get("shown_on", {}).items():
+            ptype, only_if = (need, None) if isinstance(need, str) else need
+            if only_if and only_if not in types:
+                continue
+            tag = "{" + c["id"] + "." + out + "}"
+            if not any(p["type"] == ptype and tag in p["label"] for p in spec["parts"]):
+                errs.append(f"calculation {c['id']} ({c['tool']}) assumes {out}: the circuit must contain a {ptype} "
+                            f"part whose label shows {tag}, wired where the calculation assumes it")
+        for need in CALCULATORS[c["tool"]].get("requires_parts", []):
+            options = (need,) if isinstance(need, str) else need
+            if not types & set(options):
+                errs.append(f"calculation {c['id']} ({c['tool']}) models a circuit with a {' or '.join(options)}; "
+                            f"the drawn circuit has none, so its numbers would not match the scene")
+    q = " " + re.sub(r"[^a-z0-9]+", " ", spec.get("question", "").lower()) + " "
+    for words, ptype in ASKED_PARTS:  # answer the question that was asked: named components must be shown
+        if any(f" {w} " in q for w in words) and ptype not in types:
+            errs.append(f"the question asks about {words[0].upper() if len(words[0]) <= 6 else words[0]}, but the "
+                        f"circuit has no {ptype} part: show it (in its own group when comparing)")
+    by_pin_net: dict[int, set[str]] = {}
+    for pin, net in nets.items():
+        by_pin_net.setdefault(net, set()).add(pin.split(".")[0])
+    ptype_of = {p["id"]: p["type"] for p in spec["parts"]}
+    conns = {c["id"]: c for c in spec["connections"]}
+    for f in spec["flows"]:  # flow markers show STEADY (DC) current; none flows through a charged capacitor
+        for a, b in zip(f["path"], f["path"][1:]):
+            shared = {conns[a]["from"].split(".")[0], conns[a]["to"].split(".")[0]} & \
+                     {conns[b]["from"].split(".")[0], conns[b]["to"].split(".")[0]}
+            caps = [q for q in shared if ptype_of.get(q) == "capacitor"]
+            if caps:
+                errs.append(f"flow {f['id']} passes through capacitor {caps[0]}: flows animate steady DC current, "
+                            f"and no steady current flows through a capacitor")
+    for p in spec["parts"]:
+        if p["type"] == "led":
+            near = by_pin_net[nets[f"{p['id']}.anode"]] | by_pin_net[nets[f"{p['id']}.cathode"]]
+            if not any(ptype_of[q] == "resistor" for q in near):
+                errs.append(f"LED {p['id']} has no series resistor next to it: nothing would limit its current "
+                            f"(put a resistor between the supply and its anode, or after its cathode)")
     for p in spec["parts"]:
         pins = [f"{p['id']}.{x}" for x in pins_for(p)]
         if len(pins) >= 2 and len({nets[x] for x in pins}) == 1 and any(

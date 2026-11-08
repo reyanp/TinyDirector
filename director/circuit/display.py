@@ -74,10 +74,21 @@ def wrap_caption(text: str, width: int = 70, max_lines: int = 5) -> str:
     return "\n".join(lines)
 
 
-def labels_for(sol: Solution, caption: str = "") -> dict[str, str]:
+def title_for(tool: str, user_text: str = "", circuit: LedCircuit | None = None) -> str:
+    """Scene title for this turn: the lesson question, the what-if being shown, or the learner's question."""
+    if tool == "set_resistance" and circuit is not None:
+        return f"What if the resistor is {format_ohms(circuit.resistance_ohm)}?"
+    if tool == "explain" and user_text.strip():
+        q = " ".join(user_text.split())
+        q = q[0].upper() + q[1:]
+        return q if len(q) <= 56 else q[:55].rstrip() + "…"  # one HUD line (the equation sits right below)
+    return TITLE
+
+
+def labels_for(sol: Solution, caption: str = "", title: str = TITLE) -> dict[str, str]:
     c = sol.circuit
     return {
-        "label_title": TITLE,
+        "label_title": title,
         "label_battery": f"{format_volts(c.source_v)} battery",
         "label_resistor": f"Resistor  R = {format_ohms(c.resistance_ohm)}\n"
                           f"voltage across it: {format_volts(sol.v_resistor, 1)}",
@@ -90,10 +101,10 @@ def labels_for(sol: Solution, caption: str = "") -> dict[str, str]:
     }
 
 
-def display_for(sol: Solution, caption: str = "") -> dict:
+def display_for(sol: Solution, caption: str = "", title: str = TITLE) -> dict:
     ma = sol.current_ma
     return {
-        "labels": labels_for(sol, caption),
+        "labels": labels_for(sol, caption, title),
         "flow_lap_frames": lap_frames(ma),
         "flow_markers": FLOW_MARKERS,
         "led_emission": led_emission(ma),
@@ -104,10 +115,10 @@ def display_for(sol: Solution, caption: str = "") -> dict:
     }
 
 
-def circuit_request(request_id: str, action: str, circuit: LedCircuit, caption: str = "") -> dict:
+def circuit_request(request_id: str, action: str, circuit: LedCircuit, caption: str = "", title: str = TITLE) -> dict:
     """A circuit_request_v1 document (see shared/schema/circuit_request_v1.json)."""
     if action not in ("build", "update"):
         raise ValueError("action must be build or update")
     sol = solve(circuit)
     return {"kind": "circuit", "schema_version": 1, "request_id": request_id, "action": action,
-            "circuit": circuit.as_dict(), "display": display_for(sol, caption)}
+            "circuit": circuit.as_dict(), "display": display_for(sol, caption, title)}

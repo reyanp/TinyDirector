@@ -38,3 +38,9 @@ CC0 Poly Haven assets and stylized library meshes, used through the same Nemotro
 every number, and Blender shows the same circuit updating (labels, resistor color bands, current-flow speed,
 LED glow). Run `blender --python blender_engine/worker.py`, then `python -m director.tutor`.
 See [docs/CIRCUIT_TUTOR.md](docs/CIRCUIT_TUTOR.md).
+
+## Multi-agent lessons
+Ask about another electronics idea ("Why would someone use a BJT over a MOSFET?") and an agent team builds a new
+lesson. Nemotron directs (lesson spec), calculators produce every number, an OpenAI builder writes sandboxed
+Blender toolkit code, and a verifier checks Blender's read-back plus a Nemotron vision pass. Only a verified build
+is loaded into your scene. `python -m director.lesson --text "..." --send`; see [docs/MULTI_AGENT.md](docs/MULTI_AGENT.md).

@@ -4,17 +4,18 @@ Pins are the ONLY way parts connect, so wiring can be checked geometrically: a w
 on the named pins (within a few millimetres of scene units).
 """
 
+# size = footprint W x D x H in meters at rotate=0 (X, Y, Z), for layout planning
 PARTS = {
-    "battery": {"pins": ["+", "-"], "desc": "9 V battery, snap terminals on top"},
-    "resistor": {"pins": ["a", "b"], "desc": "through-hole resistor with color bands (lies along X)"},
-    "led": {"pins": ["anode", "cathode"], "desc": "5 mm LED, long leg = anode; color via param"},
-    "npn_bjt": {"pins": ["E", "B", "C"], "desc": "NPN BJT in a TO-92 package (e.g. 2N3904), legs E-B-C"},
-    "n_mosfet": {"pins": ["G", "D", "S"], "desc": "N-channel logic-level MOSFET in TO-220 (e.g. IRLZ44N), legs G-D-S"},
-    "signal": {"pins": ["out", "gnd"], "desc": "logic signal source (a microcontroller pin), e.g. 5 V"},
-    "ground": {"pins": ["gnd"], "desc": "ground / 0 V reference rail"},
-    "switch": {"pins": ["a", "b"], "desc": "push-button switch"},
-    "capacitor": {"pins": ["+", "-"], "desc": "electrolytic capacitor (can on two legs)"},
-    "custom": {"pins": None, "desc": "anything else: the spec lists its pins and the builder models it from primitives"},
+    "battery": {"pins": ["+", "-"], "size": (0.6, 0.9, 1.8), "desc": "battery block (prints the voltage from its label), snap terminals on top (+ at back, - at front)"},
+    "resistor": {"pins": ["a", "b"], "size": (2.0, 0.6, 0.7), "desc": "through-hole resistor lying along X; pin a = left lead end, b = right; color bands drawn from an 'NNN Ω' value in its label"},
+    "led": {"pins": ["anode", "cathode"], "size": (0.7, 0.7, 1.9), "desc": "5 mm LED standing up; legs along Y (anode at +Y/back, cathode at -Y/front); color param"},
+    "npn_bjt": {"pins": ["E", "B", "C"], "size": (0.6, 0.5, 1.2), "desc": "NPN BJT, TO-92 package (e.g. 2N3904), legs E-B-C left to right along X, flat face to -Y"},
+    "n_mosfet": {"pins": ["G", "D", "S"], "size": (1.0, 0.5, 2.0), "desc": "N-channel logic-level MOSFET, TO-220 (e.g. IRLZ44N), legs G-D-S left to right along X"},
+    "signal": {"pins": ["out", "gnd"], "size": (1.4, 0.9, 0.4), "desc": "logic signal source (microcontroller board); header pins at the front edge"},
+    "ground": {"pins": ["gnd"], "size": (1.4, 0.2, 0.1), "desc": "ground / 0 V rail (a metal bar along X)"},
+    "switch": {"pins": ["a", "b"], "size": (0.7, 0.6, 0.5), "desc": "push-button switch, pins left/right along X"},
+    "capacitor": {"pins": ["+", "-"], "size": (0.5, 0.5, 1.2), "desc": "electrolytic capacitor (can on two legs, stripe marks -)"},
+    "custom": {"pins": None, "size": None, "desc": "anything else: the spec lists its pins and the builder models it from primitives"},
 }
 
 COLORS = {"red": "#D9342B", "black": "#202226", "orange": "#E58A1F", "yellow": "#E8C547", "blue": "#2F6FD6",

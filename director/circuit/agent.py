@@ -29,9 +29,13 @@ TOOLS = {
                       "'2.2 kΩ' -> 2200. 'Put it back to 330' -> 330.",
     "explain": "Answer a question about the circuit WITHOUT changing it (e.g. 'why is it dimmer?', 'what does the "
                "resistor do?', 'what if there were no resistor?'). args: {\"question\": string}",
-    "clarify": "The request is outside this lesson (other components, other circuits, changing the battery or LED, "
-               "PCB design, ...). args: {\"message\": short reply saying what IS possible: change the resistor, "
-               "ask questions about the circuit}",
+    "teach_topic": "The user wants to learn a DIFFERENT electronics idea that needs a different circuit (e.g. BJT vs "
+                   "MOSFET, transistor switches, voltage dividers, Ohm's law with one resistor). A director + builder "
+                   "agent team designs, builds and verifies a new 3D lesson for it. args: {\"question\": the "
+                   "learner's question, rephrased as a clear question}",
+    "clarify": "The request is not about electronics, or is unsafe or impossible to show (mains wiring, PCB layout, "
+               "...). args: {\"message\": short reply saying what IS possible: this lesson's resistor, questions "
+               "about the circuit, or a new electronics topic}",
 }
 
 TOOL_SCHEMA = {
@@ -54,6 +58,10 @@ TOOL_SCHEMA = {
         {"if": {"properties": {"tool": {"const": "explain"}}},
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["question"],
                                           "properties": {"question": {"type": "string", "maxLength": 500}}}}}},
+        {"if": {"properties": {"tool": {"const": "teach_topic"}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["question"],
+                                          "properties": {"question": {"type": "string", "minLength": 3,
+                                                                      "maxLength": 300}}}}}},
         {"if": {"properties": {"tool": {"const": "clarify"}}},
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["message"],
                                           "properties": {"message": {"type": "string", "maxLength": 500}}}}}},
@@ -77,6 +85,8 @@ Rules:
   ("what if it were 470 ohms?").
 - "Teach me ..." / "show me ..." / "why do LEDs need resistors?" with no specific value -> teach_led_resistor.
 - Anything about removing the resistor, or why it is dimmer/brighter -> explain (the scene keeps its values).
+- A question about other components or circuits (transistors, MOSFETs, voltage dividers, ...) -> teach_topic,
+  even mid-lesson: the learner may switch topics at any time.
 """
 
 EXPLAIN_PROMPT = """EXPLAINER. You are a friendly electronics tutor for complete beginners. The 3D scene has just
@@ -261,6 +271,8 @@ def number_check(text: str, facts: dict) -> list[str]:
 
 
 def template_explanation(facts: dict) -> str:
+    if "now" not in facts:  # a built topic lesson: its verified key points are the answer
+        return " ".join(facts.get("key_points", [])) or "The lesson is on screen."
     now = facts["now"]
     if "before" in facts:
         b = facts["before"]

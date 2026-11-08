@@ -11,6 +11,8 @@ Options after `--`:   --keep         keep TinyDirector objects from a previous s
 Inbox files with {"kind": "inspect"} are read-only scene inspections: nothing is applied.
 Inbox files with {"kind": "circuit"} drive the LED + resistor lesson (blender_engine/circuit.py,
 shared/schema/circuit_request_v1.json); inspections then also carry a "circuit" read-back block.
+Inbox files with {"kind": "lesson"} load a VERIFIED multi-agent lesson build (lesson.blend from the lesson
+cache, appended as data by lesson_loader.py; no generated code runs in this Blender).
 Env TINYDIRECTOR_ROOT overrides the repo root; TD_SHARED_DIR overrides the inbox/outbox/state folder.
 """
 
@@ -50,7 +52,7 @@ if str(ROOT) not in sys.path:
 
 import bpy  # noqa: E402
 
-from blender_engine import circuit, engine, snapshot  # noqa: E402
+from blender_engine import circuit, engine, lesson_loader, snapshot  # noqa: E402
 
 SNAPSHOTS = os.environ.get("TD_SNAPSHOT", "1") != "0"
 SHARED = Path(os.environ["TD_SHARED_DIR"]).resolve() if os.environ.get("TD_SHARED_DIR") else ROOT / "shared"
@@ -91,6 +93,11 @@ def _inspect(rid: str) -> dict:
     if lesson is not None:
         result["circuit"] = lesson
         result["other_objects"] = circuit.other_objects()
+    col = bpy.data.collections.get(lesson_loader.toolkit.COLLECTION)
+    if col is not None and col.objects:
+        result["lesson"] = {"ok": True, **lesson_loader.toolkit.readback()}
+        result["other_objects"] = [o for o in result.get("other_objects", [])
+                                   if not (bpy.data.objects.get(o["name"]) or {}).get("lesson_part")]
     return result
 
 
@@ -137,7 +144,11 @@ def process_inbox() -> int:
                 handled += 1
                 continue
             if isinstance(plan, dict) and plan.get("kind") == "circuit":
+                if plan.get("action") == "build":
+                    lesson_loader.clear()  # one lesson on screen at a time
                 result = circuit.make_result(rid, plan)
+            elif isinstance(plan, dict) and plan.get("kind") == "lesson":
+                result = lesson_loader.make_result(rid, plan, [SHARED, ROOT / "shared"])
             else:
                 result = engine.make_result(rid, plan)
         except json.JSONDecodeError:
@@ -153,6 +164,9 @@ def process_inbox() -> int:
                 t0 = time.perf_counter()
                 if result.get("circuit_action"):  # lesson camera + EEVEE, at a powered-on frame
                     circuit.render_preview(OUTBOX / f"{rid}.jpg", 960, 540, samples=16, file_format="JPEG")
+                elif result.get("lesson_action"):
+                    circuit.render_preview(OUTBOX / f"{rid}.jpg", 960, 540, frame=bpy.context.scene.frame_end,
+                                           samples=16, file_format="JPEG")
                 else:
                     snapshot.render(OUTBOX / f"{rid}.jpg")
                 result["snapshot"] = f"{rid}.jpg"
@@ -161,8 +175,8 @@ def process_inbox() -> int:
                 print(f"[TinyDirector] snapshot failed: {exc}")
         _write_json(OUTBOX / f"{rid}.json", result)
         _write_json(STATE / "blender_manifest.json", result)
-        if result.get("circuit_action") and result.get("applied"):
-            _present_circuit(result["circuit_action"])
+        if (result.get("circuit_action") or result.get("lesson_action")) and result.get("applied"):
+            _present_circuit(result.get("circuit_action") or "build")
         save = _save_path()
         if save and result.get("applied"):
             try:
@@ -220,6 +234,7 @@ def start() -> None:
     if "--keep" not in args:
         engine.reset_scene()
         circuit.clear()
+        lesson_loader.clear()
     setup_scene()
     _write_json(STATE / "blender_manifest.json", _snapshot())
     if "--once" in args:

@@ -51,6 +51,8 @@ class TutorMockModel:
         low = message.lower()
         ohms = parse_ohms(message)
         no_circuit = state.startswith("No lesson")
+        if any(w in low for w in ("bjt", "mosfet", "transistor", "divider")):
+            return {"tool": "teach_topic", "args": {"question": message}, "reason": "new topic"}
         if ohms is not None and any(w in low for w in ("resistor", "ohm", "Ω".lower(), "back", "change", "make", "set")):
             return {"tool": "set_resistance", "args": {"resistance_ohm": ohms}, "reason": "user named a value"}
         if any(w in low for w in ("teach", "lesson", "show me", "need a resistor", "need resistors")) and (
@@ -63,6 +65,8 @@ class TutorMockModel:
 
     @staticmethod
     def _explain(f: dict) -> str:
+        if "now" not in f:
+            return " ".join(f.get("key_points", []))
         now = f["now"]
         if "before" in f:
             b = f["before"]
