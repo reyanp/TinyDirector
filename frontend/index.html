@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Poyo Lab</title>
+  <link rel="icon" href="/poyo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/poyo.svg" alt="" class="brand-mark">
+      <span class="brand-name">Poyo<span class="brand-sub">lab</span></span>
+    </div>
+    <div class="modes" id="modes" aria-label="Execution mode"></div>
+    <button class="ghost" id="reset" type="button" title="Start a new conversation (the Blender scene stays)">New chat</button>
+  </header>
+
+  <main class="layout">
+    <!-- left: Poyo + the lesson on stage -->
+    <section class="col col-stage" aria-label="Tutor and current lesson">
+      <div class="poyo-stage">
+        <div class="bubble" id="bubble" aria-live="polite"></div>
+        <div class="poyo idle" id="poyo" aria-hidden="true"></div>
+        <div class="poyo-shadow" aria-hidden="true"></div>
+      </div>
+
+      <article class="card lesson" id="lesson">
+        <div class="eyebrow">On the Blender stage</div>
+        <h1 class="lesson-title" id="lesson-title">No lesson yet</h1>
+        <div class="lesson-meta" id="lesson-meta"></div>
+        <figure class="snapshot" id="snapshot-wrap" hidden>
+          <img id="snapshot" alt="Latest Blender snapshot of the lesson">
+          <figcaption>Blender snapshot · the live scene is in the Blender window</figcaption>
+        </figure>
+        <p class="lesson-text" id="lesson-text">Ask Poyo a question and the lesson appears in Blender.</p>
+      </article>
+    </section>
+
+    <!-- center: conversation -->
+    <section class="col col-chat" aria-label="Conversation">
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="suggestions" id="suggestions"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <input id="input" type="text" maxlength="500" placeholder="Ask Poyo… e.g. “Teach me why LEDs need resistors.”"
+               aria-label="Message to Poyo">
+        <button id="send" type="submit">Send</button>
+      </form>
+    </section>
+
+    <!-- right: what the agents are actually doing -->
+    <section class="col col-agents" aria-label="Agent activity">
+      <div class="card agents">
+        <div class="agents-head">
+          <h2>Agent activity</h2>
+          <span class="live-dot" id="live-dot" title="Connected to the tutor"></span>
+        </div>
+        <ol class="pipeline" id="pipeline" aria-label="Pipeline stages"></ol>
+        <ol class="events" id="events" aria-live="polite"></ol>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

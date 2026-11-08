@@ -66,6 +66,16 @@ Nemotron VL) -> 1 repair -> `fallback.py` deterministic builder (layout = warnin
 Worker `{"kind": "lesson"}` -> `lesson_loader.py` appends the TD_Lesson collection (path must be a cache
 `lesson.blend`), director re-verifies the live read-back. Circuit build clears the lesson and vice versa.
 
+## Companion UI: Poyo (frontend/, director/server.py)
+`python -m director.server [--mock] [--simulate] [--port 8765]` -> http://127.0.0.1:8765 (stdlib http.server, localhost
+only, no new deps). Blender stays the 3D stage; the page is a companion: Poyo (`frontend/poyo.svg`, placeholder art,
+keep ids poyo-body/eyes/mouth), conversation, lesson card (server-formatted chips + Blender snapshot from the outbox),
+agent-activity panel. `director/events.py`: emit(stage, status, title, detail, /, **data); `run_turn(..., emit=, context=)`
+and `pipeline.build_lesson(..., emit=)` send REAL events only (start right before a step runs). `context` carries the
+last explanation; follow-ups (`tutor.FOLLOW_UP_RE`: simpler/again/...) re-explain it and keep the scene title.
+API: GET /api/state, POST /api/turn {text} (409 while busy), POST /api/reset, GET /api/events (SSE, ?since=), GET
+/api/snapshot/<name>. Index is served with Poyo + state inlined (no empty first paint). Tests: director/tests/test_server.py.
+
 ## Ops
 `add`, `modify` (shifts an animated channel instead of wiping it), `delete`, `animate` (2 keys; start = value the
 object actually has at start_frame, so segments chain), `bounce` (cycles x Z hop, ends at start height). Timeline is
@@ -103,6 +113,7 @@ python -m director.dev.library_e2e [--mock]            # asset-library end-to-en
 python -m director.tutor                               # circuit tutor, interactive (Blender worker running)
 python -m director.dev.circuit_e2e [--mock]            # circuit lesson end-to-end, 3 prompts, private bridge
 python -m director.lesson --text "..." [--send]        # multi-agent lesson (Nemotron director + OpenAI builder)
+python -m director.server [--mock --simulate]           # Poyo companion UI at http://127.0.0.1:8765
 ```
 Flags: `--mock` (offline model), `--reset`, `--mode auto|create|edit`, `--manifest PATH`, `--json`, `-v`,
 `--no-verify`, `--max-corrections N`, `--timeout S`.

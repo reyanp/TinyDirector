@@ -8,6 +8,7 @@ import time
 
 from .. import bridge, paths
 from ..nemotron_client import ConfigError, NemotronClient
+from ..events import noop
 from . import pipeline, verify as verify_mod
 
 
@@ -37,12 +38,13 @@ def make_clients(mock: bool, builder: str, vision: bool, log=print):
         return director, None, vis
 
 
-def send_to_blender(lesson: pipeline.Lesson, timeout: float = 60.0, log=print, send=None) -> dict:
+def send_to_blender(lesson: pipeline.Lesson, timeout: float = 60.0, log=print, send=None, emit=noop) -> dict:
     """Load the verified build into the running Blender worker, then re-verify what Blender now shows."""
     rid = f"lesson-{time.strftime('%Y%m%d-%H%M%S')}-{lesson.key[-8:]}"
     rb = verify_mod.load_readback(lesson.out_dir)
     req = {"kind": "lesson", "request_id": rid, "blend": str(lesson.blend.resolve()),
            "title": lesson.resolved["title"], "frames": rb.get("frames") or [1, 600]}
+    emit("load", "start", "Loading the verified lesson into Blender", "appending data only; no code runs there")
     result = (send or (lambda r: bridge.send(r, timeout=timeout)))(req)
     if result.get("status") != "ok":
         raise pipeline.LessonError(f"Blender could not load the lesson: {result.get('errors')}")
@@ -53,6 +55,10 @@ def send_to_blender(lesson: pipeline.Lesson, timeout: float = 60.0, log=print, s
         f"{len(rep.passed)} passed, {len(rep.errors)} errors")
     for e in rep.errors[:5]:
         log(f"           - {e}")
+    emit("load", "ok" if result.get("status") == "ok" else "error", f"Loaded {result.get('applied')} objects",
+         result.get("executor", ""))
+    emit("verify", "ok" if not rep.errors else "error",
+         f"Live scene re-check: {len(rep.passed)} passed, {len(rep.errors)} errors", "; ".join(rep.errors[:2]))
     if rep.errors:
         raise pipeline.LessonError(f"live scene does not match the verified lesson: {rep.errors[:3]}")
     if result.get("snapshot"):

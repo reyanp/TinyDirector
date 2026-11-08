@@ -29,6 +29,7 @@ from blender_engine import sandbox
 from .. import paths
 from . import builder as builder_mod
 from . import director_agent, fallback, verify as verify_mod
+from ..events import noop
 from .spec import resolve
 
 RUNNER = paths.REPO_ROOT / "blender_engine" / "lesson_runner.py"
@@ -132,12 +133,14 @@ def load_cached(question: str, cache_dir: Path = CACHE) -> Lesson | None:
 
 
 def build_lesson(question: str, director_client, builder_client=None, vision_client=None, *,
-                 use_cache: bool = True, cache_dir: Path = CACHE, runner=run_blender, log=print) -> Lesson:
+                 use_cache: bool = True, cache_dir: Path = CACHE, runner=run_blender, log=print,
+                 emit=noop) -> Lesson:
     question = " ".join(question.split())
     if use_cache:
         hit = load_cached(question, cache_dir)
         if hit is not None:
             log(f"[lesson] cache hit {hit.out_dir}")
+            emit("director", "info", "Verified lesson found in the cache", hit.resolved["title"], cached=True)
             return hit
     key = cache_key(question)
     out = cache_dir / key
@@ -150,14 +153,17 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
     t0 = time.time()
     dlabel = f"{getattr(director_client, 'model', '?')}{'' if getattr(director_client, 'live', True) else ' (MOCK)'}"
     log(f"[lesson] director {dlabel}: writing the lesson spec ...")
+    emit("director", "start", "Designing the lesson", f"{dlabel} writes the lesson spec")
     try:
         sr = director_agent.write_spec(question, director_client)
     except director_agent.SpecError as exc:
         _save(out / "spec_errors.json", {"errors": exc.errors, "raw": [r.content for r in exc.replies]})
+        emit("director", "error", "Lesson spec still invalid after one retry", "; ".join(exc.errors[:2]))
         raise LessonError(f"director spec invalid after one retry: {exc.errors[:3]}") from None
     if sr.spec is None:
         lesson.unsupported = sr.unsupported
         log(f"[lesson] director: out of scope - {sr.unsupported}")
+        emit("director", "info", "No honest 3D demo for this", sr.unsupported)
         return lesson
     lesson.spec = sr.spec
     lesson.resolved, lesson.results = resolve(sr.spec)
@@ -165,6 +171,11 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
     _save(out / "resolved_spec.json", {"spec": lesson.resolved, "results": lesson.results})
     log(f"[lesson] spec ok in {time.time() - t0:.1f}s: {lesson.resolved['title']!r}, "
         f"{len(sr.spec['parts'])} parts, {len(sr.spec['connections'])} wires, {len(sr.spec['flows'])} flows")
+    emit("director", "ok", f"Spec: {lesson.resolved['title']}",
+         f"{len(sr.spec['parts'])} parts, {len(sr.spec['connections'])} wires, {len(sr.spec['flows'])} current flows; "
+         f"{len(sr.replies)} model call(s)", attempts=len(sr.replies))
+    emit("calculate", "ok", "Numbers from the calculators",
+         ", ".join(f"{c['tool']}" for c in sr.spec["calculations"]))
     for w in sr.warnings:
         log(f"           spec note: {w}")
     lesson.notes += [w for w in sr.warnings if w.startswith("typed value")]
@@ -176,6 +187,7 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
         _save(code_path, code)
         bdir = out / f"build_{tag}"
         t = time.time()
+        emit("blender", "start", f"Building ({name})", "sandboxed headless Blender, separate process", attempt=tag)
         errs = sandbox.check(code, set(builder_mod.TOOLKIT_NAMES))
         if errs:
             rep, rb = verify_mod.Report(errors=[f"sandbox: {e}" for e in errs[:12]]), {"ok": False}
@@ -187,6 +199,10 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
         _save(bdir.with_suffix(".report.json"), _report_dict(rep))
         lesson.attempts.append(Attempt(name, str(code_path), rep.ok, rep.summary(), rep.errors, time.time() - t))
         log(f"[lesson] {tag} ({name}): {rep.summary()} in {time.time() - t:.1f}s")
+        emit("blender", "ok" if rb.get("ok") else "error", "Built" if rb.get("ok") else "Build failed",
+             "" if rb.get("ok") else str(rb.get("error", ""))[:200], attempt=tag)
+        emit("verify", "ok" if rep.ok else "error", f"Verifier: {rep.summary()}", "; ".join(rep.errors[:2])[:300],
+             attempt=tag, errors=rep.errors[:6])
         for e in rep.errors[:6]:
             log(f"           - {e}")
         return rep, rb
@@ -202,6 +218,7 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
                                     "report": _report_dict(rep), "attempts": [a.__dict__ for a in lesson.attempts],
                                     "notes": lesson.notes, "created": time.strftime("%Y-%m-%d %H:%M:%S")})
         log(f"[lesson] ACCEPTED ({name}) -> {out / 'lesson.blend'}")
+        emit("verify", "ok", f"Accepted: {name}", rep.summary(), builder=name)
         return lesson
 
     # 2. builder agent: write -> run -> verify -> one repair
@@ -209,6 +226,7 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
     if builder_client is not None:
         bname = f"openai:{builder_client.model}" if getattr(builder_client, "live", True) else "MOCK builder"
         log(f"[lesson] builder {bname}: writing scene code ...")
+        emit("builder", "start", "Writing scene code", f"{bname} (toolkit calls only)")
         try:
             msgs = builder_mod.first_messages(lesson.resolved, draft)
             code, errs, _ = builder_mod.ask(builder_client, msgs)
@@ -216,6 +234,7 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
             if rep.ok:
                 return accept("agent1", bname, rep)
             log("[lesson] builder repair (1 of 1) ...")
+            emit("builder", "start", "Repairing the scene (1 of 1)", f"{len(rep.errors)} verifier issue(s) sent back")
             code2, errs2, _ = builder_mod.ask(builder_client, builder_mod.repair_messages(msgs, code, rep.errors, rb))
             rep2, rb2 = attempt(bname, code2, "agent2", True) if code2 else (verify_mod.Report(errors=errs2), {})
             if rep2.ok:
@@ -230,10 +249,13 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
         except Exception as exc:  # noqa: BLE001 - any builder failure falls back, reported
             lesson.notes.append(f"builder agent unavailable: {type(exc).__name__}: {exc}"[:300])
             log(f"[lesson] builder failed: {type(exc).__name__}: {exc}"[:300])
+            emit("builder", "error", "Builder unavailable", f"{type(exc).__name__}: {exc}"[:200])
     else:
         lesson.notes.append("no builder LLM configured (OPENAI_API_KEY empty): deterministic builder used")
 
     # 3. deterministic fallback: same sandbox + structural checks; layout issues are warnings
+    if candidate is None:
+        emit("builder", "info", "Using the deterministic layout", lesson.notes[-1] if lesson.notes else "")
     rep, _ = attempt("deterministic", draft, "fallback", False)
     if candidate is not None and (not rep.ok or len(candidate.warnings) <= len(rep.warnings)):
         lesson.notes.append(f"kept the builder's repaired scene: structurally verified, {len(candidate.warnings)} "

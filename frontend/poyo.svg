@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 210" role="img" aria-label="Poyo">
+  <!-- Poyo (working name). Drawn from the written description; replace this path with the official
+       reference silhouette when available. Keep the ids: poyo-body, poyo-eyes, poyo-mouth. -->
+  <defs>
+    <radialGradient id="poyo-plush" cx="45%" cy="38%" r="70%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.7" stop-color="#f7f8fb"/>
+      <stop offset="1" stop-color="#e3e8f0"/>
+    </radialGradient>
+  </defs>
+  <path id="poyo-body" fill="url(#poyo-plush)" stroke="#d3dae5" stroke-width="2" stroke-linejoin="round"
+        d="M 63 71
+           C 69 60, 76 50, 84 40
+           C 87 35, 92 34, 94 39
+           C 99 50, 107 57, 118 58
+           C 130 58, 138 50, 145 38
+           C 148 32, 154 31, 156 37
+           C 160 48, 164 58, 170 66
+           C 194 62, 222 74, 223 97
+           C 224 118, 203 125, 184 119
+           C 189 138, 187 158, 174 168
+           C 164 177, 146 179, 136 172
+           C 128 168, 123 157, 115 157
+           C 106 157, 101 171, 92 175
+           C 79 181, 62 176, 57 162
+           C 52 150, 52 135, 57 121
+           C 37 128, 14 121, 15 99
+           C 16 79, 41 69, 63 71 Z"/>
+  <g id="poyo-eyes" fill="#1b2a55">
+    <ellipse cx="103" cy="104" rx="5.2" ry="9"/>
+    <ellipse cx="133" cy="104" rx="5.2" ry="9"/>
+  </g>
+  <path id="poyo-mouth" d="M 112 121 L 118 127 L 124 121" fill="none" stroke="#1b2a55" stroke-width="3.6"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

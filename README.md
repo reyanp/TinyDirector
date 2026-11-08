@@ -39,6 +39,12 @@ every number, and Blender shows the same circuit updating (labels, resistor colo
 LED glow). Run `blender --python blender_engine/worker.py`, then `python -m director.tutor`.
 See [docs/CIRCUIT_TUTOR.md](docs/CIRCUIT_TUTOR.md).
 
+## Poyo: companion tutor UI
+Run `blender --python blender_engine/worker.py` (the 3D stage), then `python -m director.server` and open
+http://127.0.0.1:8765. Talk to Poyo; the agent-activity panel shows the real pipeline events (Nemotron tool choice,
+calculation, Blender build, read-back verification). Offline: `python -m director.server --mock --simulate`
+(labeled MOCK / SIMULATED in the UI).
+
 ## Multi-agent lessons
 Ask about another electronics idea ("Why would someone use a BJT over a MOSFET?") and an agent team builds a new
 lesson. Nemotron directs (lesson spec), calculators produce every number, an OpenAI builder writes sandboxed
