@@ -39,11 +39,14 @@ every number, and Blender shows the same circuit updating (labels, resistor colo
 LED glow). Run `blender --python blender_engine/worker.py`, then `python -m director.tutor`.
 See [docs/CIRCUIT_TUTOR.md](docs/CIRCUIT_TUTOR.md).
 
-## Poyo: companion tutor UI
-Run `blender --python blender_engine/worker.py` (the 3D stage), then `python -m director.server` and open
-http://127.0.0.1:8765. Talk to Poyo; the agent-activity panel shows the real pipeline events (Nemotron tool choice,
-calculation, Blender build, read-back verification). Offline: `python -m director.server --mock --simulate`
-(labeled MOCK / SIMULATED in the UI).
+## Poyo studio: Blender is the stage, talk to Poyo
+`python -m director.studio --blender` starts Blender as a full-window stage (no panels, through the lesson camera)
+and the Poyo companion at http://127.0.0.1:8765. Put the two windows side by side, click the mic (or hold Space) and
+say "Poyo, teach me why LEDs need resistors." Poyo answers out loud, and the camera follows what it is talking about.
+Follow up with "What if I make the resistor 1,000 ohms?" (the same Blender objects are updated) and "Why did it get
+dimmer?" (explained without touching the scene). Voice uses OpenAI speech-to-text/text-to-speech (`OPENAI_API_KEY`);
+Nemotron still decides every turn. The Type tab in the details drawer is the text fallback. Offline:
+`python -m director.studio --mock --simulate` (labeled MOCK / SIMULATED). See [docs/STUDIO.md](docs/STUDIO.md).
 
 ## Knowledge base
 A SQLite knowledge base (`director/knowledge/`, built from the reviewed `seed.json`) holds concepts, prerequisites,

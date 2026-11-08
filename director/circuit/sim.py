@@ -16,6 +16,7 @@ from .display import COMPONENTS, LABELS
 POSITIONS = {"board_1": [0.1, 0, 0], "battery_1": [-2.75, 0, 0], "resistor_1": [0, 1.3, 0.42],
              "led_1": [2.7, 0, 0], "wire_1": [0, 0, 0], "wire_2": [0, 0, 0], "wire_3": [0, 0, 0],
              "flow_1": [0, 0, 0]}
+DIRECT_TARGETS = ("battery", "resistor", "led", "current", "overview")
 
 
 class SimulatedCircuitExecutor:
@@ -40,14 +41,43 @@ class SimulatedCircuitExecutor:
                 "scene_objects": copy.deepcopy(self.state["scene_objects"]), "executor": "simulated",
                 "circuit": copy.deepcopy(self.state["circuit"])}
 
-    def inspect(self) -> dict:
-        return {**self._result("inspect_sim"), "kind": "inspect"}
+    def _direction(self) -> dict:
+        d = self.state.setdefault("direction", {"focus": None, "caption": None})
+        return {"focus": d["focus"], "camera": None, "moving": False,
+                "halo": d["focus"] if d["focus"] in ("battery", "resistor", "led") else None,
+                "caption": d["caption"], "targets": list(DIRECT_TARGETS), "executor": "simulated"}
 
-    def send(self, req: dict) -> dict:
+    def inspect(self) -> dict:
+        out = {**self._result("inspect_sim"), "kind": "inspect"}
+        if (self.state["circuit"] or {}).get("present"):
+            out["direction"] = self._direction()
+        return out
+
+    def _direct(self, req: dict) -> dict:
+        """SIMULATED stage direction (blender_engine/direction.py): records focus + caption, moves no camera."""
+        rid = req["request_id"]
+        if not (self.state["circuit"] or {}).get("present"):
+            return self._result(rid, "error", 0, ["nothing on stage to direct"])
+        focus = req.get("focus")
+        if focus is not None and focus not in DIRECT_TARGETS:
+            return self._result(rid, "error", 0, [f"unknown focus target {focus!r}"])
+        d = self.state.setdefault("direction", {"focus": None, "caption": None})
+        if focus is not None:
+            d["focus"] = focus  # like Blender: "overview" is remembered as the focus
+        if req.get("caption") is not None:
+            d["caption"] = req["caption"]
+        self._save()
+        return {**self._result(rid, "ok", 0), "direction": self._direction()}
+
+    def send(self, req: dict, timeout: float | None = None) -> dict:  # timeout: bridge parity, unused
+        if req.get("kind") == "direct":
+            return self._direct(req)
         rid = req["request_id"]
         circ = self.state["circuit"]
         if req["action"] == "update" and not (circ and circ.get("present")):
             return self._result(rid, "error", 0, ["no lesson circuit in the scene to update; build it first"])
+        if req["action"] == "build":
+            self.state["direction"] = {"focus": None, "caption": None}
         if req["action"] == "build" or circ is None:
             circ = {"present": True, "objects": [
                 {"id": i, "uid": secrets.token_hex(4), "type": "FONT" if i.startswith("label_") else "MESH",

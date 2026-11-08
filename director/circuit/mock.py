@@ -56,6 +56,16 @@ class TutorMockModel:
             return {"tool": "teach_topic", "args": {"question": message}, "reason": "new topic"}
         if ohms is not None and any(w in low for w in ("resistor", "ohm", "Ω".lower(), "back", "change", "make", "set")):
             return {"tool": "set_resistance", "args": {"resistance_ohm": ohms}, "reason": "user named a value"}
+        if not no_circuit and re.search(r"\b(increase|decrease|bigger|smaller|higher|lower|raise|reduce)\b", low) \
+                and re.search(r"\b(resist\w*|ohms?)\b", low) and not low.startswith(("why", "what if", "how")):
+            up = re.search(r"\b(increase|bigger|higher|raise)\b", low) is not None
+            return {"tool": "adjust_resistance", "args": {"direction": "increase" if up else "decrease"},
+                    "reason": "change without a number"}
+        view = re.search(r"\b(show me|zoom|look at|focus on|point at|go back to)\b", low)
+        if not no_circuit and view and "teach" not in low:
+            target = next((t for t, rx in (("resistor", r"resistor"), ("led", r"\bled\b"), ("battery", r"batter"),
+                                           ("current", r"current|flow|arrow")) if re.search(rx, low)), "overview")
+            return {"tool": "focus_camera", "args": {"target": target}, "reason": "view only"}
         no_demo = re.search(r"explain_concept (\{.*\})", knowledge)  # the knowledge base has no 3D demo for it
         if no_demo:
             return {"tool": "explain_concept", "args": json.loads(no_demo.group(1)), "reason": "explanation only"}

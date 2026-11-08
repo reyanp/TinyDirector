@@ -3,59 +3,65 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Poyo Lab</title>
+  <title>Poyo</title>
   <link rel="icon" href="/poyo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="/poyo.svg" alt="" class="brand-mark">
-      <span class="brand-name">Poyo<span class="brand-sub">lab</span></span>
-    </div>
+  <!-- Poyo is a companion window next to Blender: Blender's viewport is the stage. -->
+  <header class="bar">
+    <button class="status" id="status" type="button" aria-expanded="false" aria-controls="drawer"
+            title="What the agents are doing (click for details)">
+      <span class="live-dot" id="live-dot"></span>
+      <span class="status-text" id="status-text">Connecting…</span>
+      <span class="chev" aria-hidden="true"></span>
+    </button>
     <div class="modes" id="modes" aria-label="Execution mode"></div>
-    <button class="ghost" id="reset" type="button" title="Start a new conversation (the Blender scene stays)">New chat</button>
+    <button class="icon-btn" id="mute" type="button" aria-pressed="false" title="Mute Poyo's voice">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path class="spk" d="M4 9h4l5-4v14l-5-4H4z"/>
+        <path class="waves" d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>
+        <path class="cross" d="M16 9l6 6M22 9l-6 6"/></svg>
+    </button>
   </header>
 
-  <main class="layout">
-    <!-- left: Poyo + the lesson on stage -->
-    <section class="col col-stage" aria-label="Tutor and current lesson">
-      <div class="poyo-stage">
-        <div class="bubble" id="bubble" aria-live="polite"></div>
-        <div class="poyo idle" id="poyo" aria-hidden="true"></div>
-        <div class="poyo-shadow" aria-hidden="true"></div>
-      </div>
+  <section class="onstage" id="onstage" aria-label="Lesson on the Blender stage">
+    <div class="eyebrow">On the Blender stage</div>
+    <div class="stage-title" id="lesson-title">Nothing yet</div>
+    <div class="lesson-meta" id="lesson-meta"></div>
+  </section>
 
-      <article class="card lesson" id="lesson">
-        <div class="eyebrow">On the Blender stage</div>
-        <h1 class="lesson-title" id="lesson-title">No lesson yet</h1>
-        <div class="lesson-meta" id="lesson-meta"></div>
-        <figure class="snapshot" id="snapshot-wrap" hidden>
-          <img id="snapshot" alt="Latest Blender snapshot of the lesson">
-          <figcaption>Blender snapshot · the live scene is in the Blender window</figcaption>
-        </figure>
-        <p class="lesson-text" id="lesson-text">Ask Poyo a question and the lesson appears in Blender.</p>
-      </article>
-    </section>
+  <section class="companion" aria-label="Poyo">
+    <p class="subtitle" id="subtitle" aria-live="polite"></p>
+    <div class="poyo idle" id="poyo" aria-hidden="true"></div>
+    <div class="poyo-shadow" aria-hidden="true"></div>
+    <p class="heard" id="heard"></p>
+  </section>
 
-    <!-- center: conversation -->
-    <section class="col col-chat" aria-label="Conversation">
-      <div class="chat" id="chat" aria-live="polite"></div>
-      <div class="suggestions" id="suggestions"></div>
-      <form class="composer" id="composer" autocomplete="off">
-        <input id="input" type="text" maxlength="500" placeholder="Ask Poyo… e.g. “Teach me why LEDs need resistors.”"
-               aria-label="Message to Poyo">
-        <button id="send" type="submit">Send</button>
-      </form>
-    </section>
+  <section class="talk">
+    <button class="mic" id="mic" type="button" aria-pressed="false" title="Talk to Poyo (click, or hold Space)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/>
+        <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg>
+    </button>
+    <div class="mic-hint" id="mic-hint">Click or hold <kbd>Space</kbd> and ask Poyo</div>
+  </section>
 
-    <!-- right: what the agents are actually doing -->
-    <section class="col col-agents" aria-label="Agent activity">
-      <div class="card kmap-card" id="kmap-card">
-        <div class="agents-head">
-          <h2>Knowledge map</h2>
-          <span class="kmap-note" id="kmap-note"></span>
-        </div>
+  <section class="drawer" id="drawer" hidden aria-label="Details">
+    <nav class="tabs" role="tablist">
+      <button role="tab" type="button" data-tab="activity" aria-selected="true">Activity</button>
+      <button role="tab" type="button" data-tab="chat" aria-selected="false">Conversation</button>
+      <button role="tab" type="button" data-tab="knowledge" aria-selected="false">Knowledge</button>
+      <button role="tab" type="button" data-tab="type" aria-selected="false">Type</button>
+    </nav>
+    <div class="tab-panel" id="tab-activity" role="tabpanel">
+      <ol class="pipeline" id="pipeline" aria-label="Pipeline stages"></ol>
+      <ol class="events" id="events" aria-live="polite"></ol>
+    </div>
+    <div class="tab-panel" id="tab-chat" role="tabpanel" hidden>
+      <div class="chat" id="chat"></div>
+    </div>
+    <div class="tab-panel" id="tab-knowledge" role="tabpanel" hidden>
+      <div class="kmap-card" id="kmap-card">
+        <div class="kmap-note" id="kmap-note"></div>
         <svg class="kmap" id="kmap" viewBox="0 0 360 232" role="img"
              aria-label="Concepts and prerequisites from the tutor's knowledge base"></svg>
         <div class="kmap-legend" aria-hidden="true">
@@ -65,16 +71,17 @@
           <span><i class="lg now"></i>this answer</span>
         </div>
       </div>
-      <div class="card agents">
-        <div class="agents-head">
-          <h2>Agent activity</h2>
-          <span class="live-dot" id="live-dot" title="Connected to the tutor"></span>
-        </div>
-        <ol class="pipeline" id="pipeline" aria-label="Pipeline stages"></ol>
-        <ol class="events" id="events" aria-live="polite"></ol>
-      </div>
-    </section>
-  </main>
+    </div>
+    <div class="tab-panel" id="tab-type" role="tabpanel" hidden>
+      <p class="type-note">Text fallback (debugging): the same turn as speaking, without the microphone.</p>
+      <div class="suggestions" id="suggestions"></div>
+      <form class="composer" id="composer" autocomplete="off">
+        <input id="input" type="text" maxlength="500" placeholder="Ask Poyo…" aria-label="Message to Poyo">
+        <button id="send" type="submit">Send</button>
+      </form>
+      <button class="ghost" id="reset" type="button" title="Start a new conversation (the Blender scene stays)">New conversation</button>
+    </div>
+  </section>
 
   <script src="/app.js"></script>
 </body>

@@ -31,8 +31,10 @@ from . import bridge, paths
 from .circuit import check
 from .events import noop
 from .circuit.agent import ToolError, _tokens, choose_tool, describe_state, explain, facts_for
-from .circuit.display import circuit_request, equation_text, title_for
-from .circuit.model import LedCircuit, check_resistance, format_ma, format_ohms, solve
+from .circuit.display import circuit_request, equation_text, title_for, wrap_caption
+from .circuit.model import (CircuitModelError, LedCircuit, check_resistance, format_ma, format_ohms, format_volts,
+                            solve, step_resistance)
+from . import stage
 from .nemotron_client import ConfigError, ModelCallError, NemotronClient
 from .planner import new_request_id
 from .trace import Trace
@@ -59,8 +61,8 @@ class BridgeExecutor:
     def inspect(self) -> dict:
         return bridge.inspect(timeout=self.timeout)
 
-    def send(self, req: dict) -> dict:
-        return bridge.send(req, timeout=self.timeout)
+    def send(self, req: dict, timeout: float | None = None) -> dict:
+        return bridge.send(req, timeout=timeout or self.timeout)
 
 
 def _executor_name(out: dict) -> str:
@@ -135,15 +137,19 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
         return _fail(emit, "scene", f"Blender did not answer: {str(exc).splitlines()[0]}", 4)
     circ = before.get("circuit") or {}
     current = LedCircuit.from_dict(circ["params"]) if circ.get("present") and circ.get("params") else None
-    trace.add("read_world", f"{_executor_name(before)}: {describe_state(current)}")
-    emit("scene", "ok", "Scene read", f"{_executor_name(before)}: {describe_state(current)}",
+    focus = (before.get("direction") or {}).get("focus")
+    lesson_on_stage = (before.get("lesson") or {}).get("title") or (
+        (context.get("topic") or {}).get("title") if before.get("lesson") else None)
+    scene_text = describe_state(current, lesson_on_stage, focus)
+    trace.add("read_world", f"{_executor_name(before)}: {scene_text}")
+    emit("scene", "ok", "Scene read", f"{_executor_name(before)}: {scene_text}",
          executor=_executor_name(before), simulated=before.get("executor") == "simulated")
 
     follow_up_text = bool(FOLLOW_UP_RE.search(text))
     kb, kn = _retrieve(text, context, follow_up_text, emit, trace)
     emit("plan", "start", "Choosing what to do", f"{'Nemotron' if client.live else 'MOCK model'} picks one tool")
     try:
-        call = choose_tool(text, client, current, history, trace, knowledge=kn)
+        call = choose_tool(text, client, current, history, trace, knowledge=kn, scene=scene_text)
     except ToolError as exc:
         print("TOOL CALL REJECTED - nothing was executed.", file=sys.stderr)
         for e in exc.errors:
@@ -170,6 +176,8 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
     if call.tool == "teach_topic":
         return teach_topic(call.args["question"], client, executor, trace, show_trace, emit=emit, context=context,
                            kb=kb, kn=kn)
+    if call.tool == "focus_camera":
+        return focus_camera(call.args["target"], executor, current, before, trace, emit, context)
     if call.tool == "explain_concept" or (call.tool == "explain" and follow_up_text
                                           and context.get("last_kind") == "concept" and context.get("concept")):
         concept = call.args.get("concept") or context["concept"]
@@ -184,7 +192,17 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
 
     base = current or LedCircuit()
     target = base
-    if call.tool in ("teach_led_resistor", "set_resistance"):
+    if call.tool == "adjust_resistance":
+        try:  # "make it bigger": the calculation module picks the value, never the model
+            ohms = step_resistance(base.resistance_ohm, call.args["direction"])
+        except CircuitModelError as exc:
+            reply = f"I can't go further that way: {exc}. The scene was not changed."
+            emit("calculate", "error", "No standard value that way", str(exc))
+            emit("turn", "ok", "Answered", "", reply=reply, source="template", scene_changed=False)
+            return 0
+        trace.add("calculate", f"{call.args['direction']} from {format_ohms(base.resistance_ohm)} -> {format_ohms(ohms)}")
+        call.args = {**call.args, "resistance_ohm": ohms}
+    if call.tool in ("teach_led_resistor", "set_resistance", "adjust_resistance"):
         ohms = call.args.get("resistance_ohm", base.resistance_ohm)
         problem = check_resistance(ohms)
         if problem:
@@ -196,7 +214,8 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
             emit("turn", "ok", "Answered", "", reply=reply, source="template", scene_changed=False)
             return 0
         target = base.with_resistance(ohms)
-    action = "build" if current is None and call.tool != "explain" else "update" if current is not None else None
+    # a question never rebuilds or re-sends the scene: it is explained as it is (Blender keeps showing it)
+    action = None if call.tool == "explain" else "build" if current is None else "update"
 
     emit("calculate", "start", "Calculating", "director/circuit/model.py: I = (V_source - V_LED) / R")
     before_sol = solve(current) if current is not None else None
@@ -219,23 +238,15 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
             facts["teaching_goal"] = ("the learner is reacting to previous_explanation: re-explain THAT idea the way "
                                       "they ask (e.g. simpler words, an everyday analogy), using only these facts; "
                                       "do not say that nothing changed")
-    emit("explain", "start", "Writing the explanation", "numbers are checked against the calculation")
-    try:
-        expl = explain(facts, client, trace, knowledge=kn.prompt_block() if kn else "", claim_check=_claim_check(kb))
-    except ModelCallError as exc:
-        from .circuit.agent import Explanation, template_explanation
-        trace.add("explain", f"model call failed ({exc}); using the deterministic template")
-        expl = Explanation(template_explanation(facts), "template")
-    emit("explain", "ok", {"nemotron": "Explanation ready (numbers verified)", "mock": "MOCK explanation ready",
-                           "template": "Template explanation (model text failed the number check)"}[expl.source],
-         "", source=expl.source, attempts=expl.attempts)
+    # the scene goes first (the learner sees the change while the explanation is written)
     title = (context.get("lesson") or {}).get("title") if follow_up else None
-    title = title or title_for(call.tool, text, target)
+    title = title or title_for("set_resistance" if call.tool == "adjust_resistance" else call.tool, text, target)
     snapshot = None
 
     code = 0
     if action is not None:
-        req = circuit_request(rid, action, target, caption=expl.text, title=title)
+        req = circuit_request(rid, action, target, title=title,
+                              caption=_scene_caption(action, current, target, before_sol, after_sol))
         errs = validate_request(req)
         if errs:  # our own bug, never send it
             print("INTERNAL: circuit request failed circuit_request_v1:", *errs, sep="\n  ", file=sys.stderr)
@@ -275,9 +286,28 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
         if out["status"] != "ok" or failed:
             print("The scene does not match the calculation (see above).", file=sys.stderr)
             code = 5
+    elif current is not None:
+        trace.add("execute", "no scene change: the question is answered about the circuit on screen")
+        emit("apply", "info", "No scene change", "explaining the circuit already on screen")
     else:
         trace.add("execute", "no scene change (no lesson circuit yet; answering from the default circuit)")
         emit("apply", "info", "No scene change", "answered from the default circuit")
+
+    emit("explain", "start", "Writing the explanation", "numbers are checked against the calculation")
+    try:
+        expl = explain(facts, client, trace, knowledge=kn.prompt_block() if kn else "", claim_check=_claim_check(kb))
+    except ModelCallError as exc:
+        from .circuit.agent import Explanation, template_explanation
+        trace.add("explain", f"model call failed ({exc}); using the deterministic template")
+        expl = Explanation(template_explanation(facts), "template")
+    emit("explain", "ok", {"nemotron": "Explanation ready (numbers verified)", "mock": "MOCK explanation ready",
+                           "template": "Template explanation (model text failed the number check)"}[expl.source],
+         "", source=expl.source, attempts=expl.attempts)
+    if action is not None and code == 0:  # the scene changed first; now its subtitle gets the explanation
+        try:
+            executor.send(stage.direct_request(caption=wrap_caption(expl.text)), timeout=20)
+        except Exception as exc:  # noqa: BLE001 - the lesson is already on screen and verified
+            trace.add("execute", f"caption update failed: {type(exc).__name__}: {exc}")
 
     label = {"nemotron": "", "mock": " [MOCK explanation]",
              "template": " [template explanation: model text failed the number check]"}[expl.source]
@@ -295,10 +325,82 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
                              "chips": [f"R = {format_ohms(target.resistance_ohm)}", f"I = {format_ma(after_sol.current_ma)}",
                                        equation_text(after_sol)]}  # formatted by the calculation module
     emit("turn", "ok" if code == 0 else "error", "Done" if code == 0 else "Scene does not match the calculation",
-         "", reply=expl.text, source=expl.source, title=title if action is not None else None, snapshot=snapshot,
+         "", reply=expl.text, source=expl.source, title=title if action is not None else (context.get("lesson") or {}).get("title"),
+         snapshot=snapshot,
          scene_changed=action is not None, lesson=context.get("lesson"), code=code,
-         grounding=_grounding(kn, expl, "calculated", kb))
+         grounding=_grounding(kn, expl, "calculated", kb),
+         stage=_stage_for(expl.text, "circuit" if (action is not None or current is not None) else None,
+                          opening="overview" if action == "build" else None))
     return code
+
+
+def _scene_caption(action, current, target, before_sol, after_sol) -> str:
+    """Subtitle shown while the explanation is being written: calculated values only."""
+    if action == "update" and current is not None and current.resistance_ohm != target.resistance_ohm:
+        return (f"Resistor {format_ohms(current.resistance_ohm)} → {format_ohms(target.resistance_ohm)}: current "
+                f"{format_ma(before_sol.current_ma)} → {format_ma(after_sol.current_ma)}.")
+    return f"With a {format_ohms(target.resistance_ohm)} resistor the current is {format_ma(after_sol.current_ma)}."
+
+
+def _stage_for(text: str, kind: str | None, parts: dict | None = None, opening: str | None = None) -> dict:
+    """Cues for the spoken explanation: which part each sentence is about (director/stage.py)."""
+    return {"kind": kind, "cues": stage.cues(text, kind, parts, opening)}
+
+
+FOCUS_NAMES = {"battery": "battery", "resistor": "resistor", "led": "LED", "current": "current", "overview": "circuit"}
+
+
+def focus_camera(target: str, executor, current, before: dict, trace: Trace, emit=noop,
+                 context: dict | None = None) -> int:
+    """'Show me the resistor': move Blender's camera there (display only) and say what it is, with the
+    calculated values. A generated lesson: focus the first part of that type."""
+    context = context if context is not None else {}
+    parts = (context.get("topic") or {}).get("parts") or {}
+    if current is not None:
+        focus, kind = target, "circuit"
+    elif before.get("lesson") and target == "overview":
+        focus, kind = "overview", "topic"
+    elif before.get("lesson"):
+        ptype = {"led": "led", "resistor": "resistor", "battery": "battery"}.get(target)
+        focus, kind = next((pid for pid, p in parts.items() if p.get("type") == ptype), None), "topic"
+    else:
+        focus, kind = None, None
+    if focus is None:
+        reply = ("There's nothing on the stage yet. Ask me to teach you something first!" if kind is None else
+                 f"This lesson doesn't have a {FOCUS_NAMES[target]} to show.")
+        emit("turn", "ok", "Answered", "", reply=reply, source="direction", scene_changed=False)
+        return 0
+    emit("apply", "start", f"Pointing the camera at the {FOCUS_NAMES[target]}", "display only: no values change")
+    try:
+        out = executor.send(stage.direct_request(focus))
+    except bridge.BridgeTimeout as exc:
+        return _fail(emit, "apply", f"Blender did not answer: {str(exc).splitlines()[0]}", 4)
+    except (bridge.BridgeResultError, FileExistsError) as exc:
+        return _fail(emit, "apply", f"Bridge error: {exc}", 5)
+    got = (out.get("direction") or {}).get("focus")
+    ok = out.get("status") == "ok" and got == focus
+    emit("apply", "ok" if ok else "error", f"Camera on the {FOCUS_NAMES[target]}" if ok else "Camera move failed",
+         "; ".join(out.get("errors", [])))
+    emit("verify", "ok" if ok else "error", f"Read-back: focus = {got}", "")
+    if current is not None and ok:
+        sol = solve(current)
+        reply = {"resistor": f"Here's the resistor: {format_ohms(current.resistance_ohm)}, with "
+                             f"{format_volts(sol.v_resistor, 1)} across it.",
+                 "led": f"Here's the LED. It holds about {format_volts(current.led_vf, 1)} and glows with "
+                        f"{format_ma(sol.current_ma)}.",
+                 "battery": f"Here's the {format_volts(current.source_v)} battery that pushes the current around.",
+                 "current": f"These glowing arrows are the current, {format_ma(sol.current_ma)}, flowing from + to −.",
+                 "overview": "Here's the whole circuit again."}[target]
+    else:
+        reply = f"Here's the {FOCUS_NAMES[target]}." if ok else "I couldn't move the camera there."
+    trace.add("execute", f"focus {focus}: {out.get('status')}")
+    trace.save()
+    context["last_kind"] = context.get("last_kind") or "circuit"
+    emit("turn", "ok" if ok else "error", "Done", "", reply=reply, source="direction", scene_changed=False,
+         lesson=context.get("lesson"), code=0 if ok else 5,
+         stage={"kind": kind, "cues": [{"text": reply, "focus": None,
+                                        "caption": stage.wrap_caption(reply) if kind == "circuit" else None}]})
+    return 0 if ok else 5
 
 
 def _remember_concepts(context: dict, kn) -> None:
@@ -379,7 +481,8 @@ def explain_topic(text: str, client, kb, kn, trace: Trace, emit=noop, context: d
     context.update(last_explanation=expl.text, last_kind="topic")
     _remember_concepts(context, kn)
     emit("turn", "ok", "Done", "", reply=expl.text, source=expl.source, title=None, scene_changed=False,
-         lesson=context.get("lesson"), code=0, grounding=_grounding(kn, expl, "calculated", kb))
+         lesson=context.get("lesson"), code=0, grounding=_grounding(kn, expl, "calculated", kb),
+         stage=_stage_for(expl.text, "topic", t.get("parts")))
     return 0
 
 
@@ -461,13 +564,17 @@ def teach_topic(question: str, client, executor, trace: Trace, show_trace: bool 
     context["last_kind"] = "topic"
     _remember_concepts(context, kn)
     context["topic"] = {"title": lesson.resolved["title"], "key_points": lesson.resolved["key_points"],
-                        "calculations": facts["calculations"], "concepts": kn.ids if kn is not None else []}
+                        "calculations": facts["calculations"], "concepts": kn.ids if kn is not None else [],
+                        "parts": {p["id"]: {"type": p["type"], "label": p.get("label", "")}
+                                  for p in lesson.resolved.get("parts", [])}}
     context["lesson"] = {"kind": "topic", "title": lesson.resolved["title"], "key_points": lesson.resolved["key_points"],
                          "builder": lesson.builder, "cached": lesson.cached}
     emit("turn", "ok", "Done", "", reply=expl.text, source=expl.source, title=lesson.resolved["title"],
          snapshot=snapshot, scene_changed=True, lesson=context["lesson"],
          preview=str(lesson.preview) if lesson.preview.exists() else None, code=0,
-         grounding=_grounding(kn, expl, "calculated", kb))
+         grounding=_grounding(kn, expl, "calculated", kb),
+         stage=_stage_for(expl.text, "topic" if isinstance(executor, BridgeExecutor) else None,
+                          context["topic"]["parts"], opening="overview"))
     return 0
 
 

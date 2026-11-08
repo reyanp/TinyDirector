@@ -27,6 +27,13 @@ TOOLS = {
     "set_resistance": "Change the resistor in the EXISTING circuit to a new value. args: {\"resistance_ohm\": number}. "
                       "Convert words to a plain number of ohms: '1k' / '1,000 ohms' / 'one thousand ohms' -> 1000, "
                       "'2.2 kΩ' -> 2200. 'Put it back to 330' -> 330.",
+    "adjust_resistance": "Make the resistor bigger or smaller when the learner gives NO value ('what happens if I "
+                         "increase the resistance?', 'use a smaller resistor'). The calculation module picks the next "
+                         "standard value (about 3 times larger or smaller). args: {\"direction\": \"increase\" or "
+                         "\"decrease\"}",
+    "focus_camera": "Only point the camera at something on screen, no explanation asked ('show me the resistor', "
+                    "'zoom in on the LED', 'look at the current', 'zoom out'). args: {\"target\": \"battery\" | "
+                    "\"resistor\" | \"led\" | \"current\" | \"overview\"}",
     "explain": "Answer a question about the circuit WITHOUT changing it (e.g. 'why is it dimmer?', 'what does the "
                "resistor do?', 'what if there were no resistor?'). args: {\"question\": string}",
     "teach_topic": "The user wants to learn a DIFFERENT electronics idea that needs a different circuit (e.g. BJT vs "
@@ -59,6 +66,13 @@ TOOL_SCHEMA = {
         {"if": {"properties": {"tool": {"const": "teach_led_resistor"}}},
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False,
                                           "properties": {"resistance_ohm": {"type": "number"}}}}}},
+        {"if": {"properties": {"tool": {"const": "adjust_resistance"}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["direction"],
+                                          "properties": {"direction": {"enum": ["increase", "decrease"]}}}}}},
+        {"if": {"properties": {"tool": {"const": "focus_camera"}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["target"],
+                                          "properties": {"target": {"enum": ["battery", "resistor", "led", "current",
+                                                                             "overview"]}}}}}},
         {"if": {"properties": {"tool": {"const": "explain"}}},
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["question"],
                                           "properties": {"question": {"type": "string", "maxLength": 500}}}}}},
@@ -89,7 +103,10 @@ Tools:
 Rules:
 - Only these tools. Resistor values must be plain numbers of ohms between {rmin:g} and {rmax:g}.
 - If the user wants a different resistor value, use set_resistance even if they phrase it as a question
-  ("what if it were 470 ohms?").
+  ("what if it were 470 ohms?"). Bigger / smaller / more / less resistance with NO number -> adjust_resistance.
+- "Why?", "why did it get dimmer?", "what does that mean?" -> explain: answer about what is already on screen;
+  never rebuild or change it for a question.
+- Only moving the view ("show me / zoom in on / look at the resistor", "zoom out") -> focus_camera.
 - "Teach me ..." / "show me ..." / "why do LEDs need resistors?" with no specific value -> teach_led_resistor.
 - Anything about removing the resistor, or why it is dimmer/brighter -> explain (the scene keeps its values).
 - A question about other components or circuits (transistors, MOSFETs, voltage dividers, ...) -> teach_topic,
@@ -139,9 +156,15 @@ class ToolError(RuntimeError):
 
 # ---------------- tool selection ----------------
 
-def describe_state(current: LedCircuit | None) -> str:
+def describe_state(current: LedCircuit | None, lesson_title: str | None = None, focus: str | None = None) -> str:
+    """What Blender reports is on stage (read back, never assumed)."""
     if current is None:
+        if lesson_title:
+            return (f"No LED circuit on screen; a generated lesson is: {lesson_title!r}."
+                    + (f" The camera is on {focus}." if focus and focus != "overview" else ""))
         return "No lesson circuit in the scene yet."
+    if focus and focus != "overview":
+        return describe_state(current) + f" The camera is focused on the {focus}."
     return (f"Circuit in the scene (read back from Blender): battery {format_volts(current.source_v)}, "
             f"resistor {format_ohms(current.resistance_ohm)}, red LED (forward voltage {format_volts(current.led_vf)}).")
 
@@ -153,12 +176,12 @@ def validate_tool(obj) -> list[str]:
 
 
 def choose_tool(text: str, client: ModelClient, current: LedCircuit | None, history: list[str],
-                trace: Trace, knowledge=None) -> ToolCall:
+                trace: Trace, knowledge=None, scene: str | None = None) -> ToolCall:
     """`knowledge` (director.knowledge.Knowledge, optional) adds the matched concepts and demos to the prompt and
     lets explain_concept be checked against the knowledge base's concept ids."""
     system = TOOL_PROMPT.format(tools="\n".join(f"- {k}: {v}" for k, v in TOOLS.items()), rmin=R_MIN_OHM,
                                 rmax=R_MAX_OHM)
-    user = (f"<circuit_state>{describe_state(current)}</circuit_state>\n"
+    user = (f"<circuit_state>{scene or describe_state(current)}</circuit_state>\n"
             + (f"<earlier_turns>{json.dumps(history[-6:])}</earlier_turns>\n" if history else "")
             + (f"<knowledge>\n{knowledge.tool_hint()}\n</knowledge>\n" if knowledge is not None else "")
             + f"<user_message>{text}</user_message>\nReturn the JSON tool call now.")

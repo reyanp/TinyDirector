@@ -66,16 +66,30 @@ Nemotron VL) -> 1 repair -> `fallback.py` deterministic builder (layout = warnin
 Worker `{"kind": "lesson"}` -> `lesson_loader.py` appends the TD_Lesson collection (path must be a cache
 `lesson.blend`), director re-verifies the live read-back. Circuit build clears the lesson and vice versa.
 
-## Companion UI: Poyo (frontend/, director/server.py)
-`python -m director.server [--mock] [--simulate] [--port 8765]` -> http://127.0.0.1:8765 (stdlib http.server, localhost
-only, no new deps). Blender stays the 3D stage; the page is a companion: Poyo (`frontend/poyo.svg`, approved art: keep
-it and its animations; keep ids poyo-body/eyes/mouth), conversation, lesson card (server-formatted chips + Blender snapshot from the outbox),
-agent-activity panel. `director/events.py`: emit(stage, status, title, detail, /, **data); `run_turn(..., emit=, context=)`
-and `pipeline.build_lesson(..., emit=)` send REAL events only (start right before a step runs). `context` carries the
-last explanation; follow-ups (`tutor.FOLLOW_UP_RE`: simpler/again/...) re-explain it and keep the scene title.
-API: GET /api/state, POST /api/turn {text} (409 while busy), POST /api/reset, GET /api/events (SSE, ?since=), GET
-/api/snapshot/<name>, GET /api/knowledge. Index is served with Poyo + state + knowledge map inlined (no empty first
-paint). Tests: director/tests/test_server.py.
+## Poyo studio: scene-first + voice (frontend/, director/server.py, director/studio.py; docs/STUDIO.md)
+Blender's viewport is the stage (worker `-- --stage`: full-window camera view, no panels/overlays, camera frame fitted,
+opaque passepartout; `--rendered` = EEVEE). Poyo = small companion browser window beside it (option A; a panel inside
+Blender was rejected: no mic capture in Blender's Python, approved SVG art/animations would need redrawing). Main view:
+Poyo (`frontend/poyo.svg`, approved art: keep it and its animations; keep ids poyo-body/eyes/mouth), mic, subtitle,
+stage title + calculated chips, status pill; drawer (hidden by default, `/#activity|chat|knowledge|type`) = activity,
+conversation + grounding, knowledge map, Type tab (text fallback). `python -m director.studio [--blender] [--mock
+--simulate] [--no-voice]`; `python -m director.server` serves the same page (stdlib http.server, localhost only).
+Voice = transport only (`director/voice.py`, OpenAI `gpt-4o-mini-transcribe` / `gpt-4o-mini-tts`, OPENAI_API_KEY;
+`FakeVoice` = MOCK): STT -> wake word stripped -> the normal turn; Poyo speaks the verified reply. No Realtime API
+(would answer by itself). `/api/tts` only speaks tutor replies + fixed PHRASES (403 otherwise); TTS cache in
+`<shared>/state/tts_cache/`.
+Turn tools: `adjust_resistance` (`model.step_resistance`, E6 x/÷3), `focus_camera` (display only), `explain` sends
+NOTHING to Blender. Build/update are sent right after the calculation (caption = calculated change), then a
+`direct` caption request sets the explanation. Turn events carry `stage={"kind","cues"}` (`director/stage.py`:
+deterministic keyword cues per sentence/clause -> focus target + caption); the browser plays cues in sync with TTS
+via `/api/direct`. Stage direction: `blender_engine/direction.py` (`{"kind":"direct"}`, additive
+`shared/schema/direct_request_v1.json`: focus battery|resistor|led|current|overview|part id, caption; camera glide by
+bpy.app.timers, no keyframes; halo ring; applied=0). `events.py`: emit(stage, status, title, detail, /, **data);
+REAL events only (start right before a step runs); `listen` events belong to the upcoming turn. `context` carries the
+last explanation; follow-ups (`tutor.FOLLOW_UP_RE`) re-explain it and keep the scene title.
+API: GET /api/state, POST /api/turn {text} (409 busy), POST /api/voice <audio> (422 nothing heard, 503 no voice),
+POST /api/tts {text}, POST /api/direct {focus, caption}, POST /api/reset, GET /api/events (SSE, ?since=),
+GET /api/snapshot/<name>, GET /api/knowledge. Tests: test_server.py, test_stage_voice.py.
 
 ## Knowledge base (P1: director/knowledge/, docs/KNOWLEDGE.md)
 `seed.json` (reviewed, in git) -> SQLite `<shared>/state/knowledge.sqlite` (`TD_KNOWLEDGE_DB`; auto-rebuilt when the
@@ -129,6 +143,9 @@ python -m director.tutor                               # circuit tutor, interact
 python -m director.dev.circuit_e2e [--mock]            # circuit lesson end-to-end, 3 prompts, private bridge
 python -m director.lesson --text "..." [--send]        # multi-agent lesson (Nemotron director + OpenAI builder)
 python -m director.server [--mock --simulate]           # Poyo companion UI at http://127.0.0.1:8765
+python -m director.studio --blender                    # Blender stage (-- --stage) + Poyo voice companion
+python -m director.dev.voice_e2e [--mock]              # voice demo end-to-end (synthesized speech, private bridge)
+blender -b --factory-startup --python blender_engine/direction_check.py   # camera focus / halo / caption checks
 python -m director.knowledge query "..."               # knowledge-base retrieval (what Nemotron is given)
 ```
 Flags: `--mock` (offline model), `--reset`, `--mode auto|create|edit`, `--manifest PATH`, `--json`, `-v`,
@@ -141,3 +158,4 @@ Exit codes: 0 ok/clarify · 1 model call failed · 2 config · 3 plan invalid af
 `TINYDIRECTOR_ROOT` (worker repo-root override), `TD_SNAPSHOT`, `TD_SHARED_DIR`.
 Lesson builder: `OPENAI_API_KEY` (empty -> deterministic builder, labeled), `OPENAI_BUILDER_MODEL` (gpt-5-mini),
 `OPENAI_BASE_URL`, `OPENAI_TIMEOUT` (180), `OPENAI_REASONING_EFFORT`; `BLENDER` = path to blender if not on PATH.
+Voice: `OPENAI_STT_MODEL` (gpt-4o-mini-transcribe), `OPENAI_TTS_MODEL` (gpt-4o-mini-tts), `OPENAI_TTS_VOICE` (coral).

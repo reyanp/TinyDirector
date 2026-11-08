@@ -8,11 +8,16 @@ Options after `--`:   --keep         keep TinyDirector objects from a previous s
                       --loop         headless (-b) only: block and poll the inbox until killed
                       --save PATH    save a copy of the .blend after every job (e.g. a demo file)
                       --library      use the asset library (same as TD_ASSET_LIBRARY=1; see assets/catalog.json)
+                      --stage        GUI: make the 3D viewport the whole window (no panels, no overlays) and
+                                     look through the lesson camera: Blender is the stage, Poyo sits beside it
+                      --rendered     with --stage: EEVEE rendered viewport (glow) instead of Material Preview
 Inbox files with {"kind": "inspect"} are read-only scene inspections: nothing is applied.
 Inbox files with {"kind": "circuit"} drive the LED + resistor lesson (blender_engine/circuit.py,
 shared/schema/circuit_request_v1.json); inspections then also carry a "circuit" read-back block.
 Inbox files with {"kind": "lesson"} load a VERIFIED multi-agent lesson build (lesson.blend from the lesson
 cache, appended as data by lesson_loader.py; no generated code runs in this Blender).
+Inbox files with {"kind": "direct"} only direct the stage: camera focus, highlight halo, caption
+(blender_engine/direction.py, shared/schema/direct_request_v1.json); lesson values never change.
 Env TINYDIRECTOR_ROOT overrides the repo root; TD_SHARED_DIR overrides the inbox/outbox/state folder.
 """
 
@@ -52,7 +57,7 @@ if str(ROOT) not in sys.path:
 
 import bpy  # noqa: E402
 
-from blender_engine import circuit, engine, lesson_loader, snapshot  # noqa: E402
+from blender_engine import circuit, direction, engine, lesson_loader, snapshot  # noqa: E402
 
 SNAPSHOTS = os.environ.get("TD_SNAPSHOT", "1") != "0"
 SHARED = Path(os.environ["TD_SHARED_DIR"]).resolve() if os.environ.get("TD_SHARED_DIR") else ROOT / "shared"
@@ -98,7 +103,48 @@ def _inspect(rid: str) -> dict:
         result["lesson"] = {"ok": True, **lesson_loader.toolkit.readback()}
         result["other_objects"] = [o for o in result.get("other_objects", [])
                                    if not (bpy.data.objects.get(o["name"]) or {}).get("lesson_part")]
+    if lesson is not None or "lesson" in result:
+        result["direction"] = direction.read_back()
     return result
+
+
+def _stage(view) -> None:
+    """--stage: the 3D viewport fills the window, clean (no panels, gizmos, grid), through the camera."""
+    window, area = view
+    space = area.spaces.active
+    space.shading.type = "RENDERED" if "--rendered" in _args() else "MATERIAL"
+    space.overlay.show_overlays = False
+    space.show_gizmo = False
+    for attr in ("show_region_header", "show_region_toolbar", "show_region_ui", "show_region_tool_header"):
+        if hasattr(space, attr):
+            setattr(space, attr, False)
+    if not window.screen.show_fullscreen:
+        with bpy.context.temp_override(window=window, area=area):
+            bpy.ops.screen.screen_full_area(use_hide_panels=True)
+
+
+def _fit_camera_frame():
+    """--stage: the lesson camera's frame fills the viewport ("Frame Camera Bounds") and anything outside it is
+    hidden (opaque passepartout), so the stage shows exactly the camera's composition with its HUD labels.
+    Run from a timer: the full-window switch resizes the area only after a redraw."""
+    try:
+        cam = bpy.context.scene.camera
+        if cam is not None:
+            cam.data.show_passepartout = True
+            cam.data.passepartout_alpha = 1.0
+        for window in bpy.context.window_manager.windows:
+            for area in window.screen.areas:
+                if area.type != "VIEW_3D":
+                    continue
+                region = next((r for r in area.regions if r.type == "WINDOW"), None)
+                r3d = area.spaces.active.region_3d
+                if region is None or r3d.view_perspective != "CAMERA":
+                    continue
+                with bpy.context.temp_override(window=window, area=area, region=region):
+                    bpy.ops.view3d.view_center_camera()
+    except Exception as exc:
+        print(f"[TinyDirector] could not fit the camera frame: {exc}")
+    return None
 
 
 def _present_circuit(action: str) -> None:
@@ -114,6 +160,13 @@ def _present_circuit(action: str) -> None:
                     area.spaces.active.shading.type = "MATERIAL"
                     area.spaces.active.region_3d.view_perspective = "CAMERA"
                     view = view or (window, area)
+        if view and "--stage" in _args():
+            _stage(view)
+            view = next(((w, a) for w in bpy.context.window_manager.windows for a in w.screen.areas
+                         if a.type == "VIEW_3D"), view)
+            view[1].spaces.active.region_3d.view_perspective = "CAMERA"
+            for delay in (0.15, 0.6):  # once after the redraw, once more after the full-window resize settles
+                bpy.app.timers.register(_fit_camera_frame, first_interval=delay)
         if action == "build":
             bpy.context.scene.frame_set(1)
         if view and not any(w.screen.is_animation_playing for w in windows):
@@ -121,6 +174,17 @@ def _present_circuit(action: str) -> None:
                 bpy.ops.screen.animation_play()
     except Exception as exc:
         print(f"[TinyDirector] could not set up the lesson view: {exc}")
+
+
+def _stage_startup():
+    try:
+        view = next(((w, a) for w in bpy.context.window_manager.windows for a in w.screen.areas
+                     if a.type == "VIEW_3D"), None)
+        if view is not None:
+            _stage(view)
+    except Exception as exc:
+        print(f"[TinyDirector] could not set up the stage: {exc}")
+    return None
 
 
 def _save_path() -> str | None:
@@ -143,11 +207,15 @@ def process_inbox() -> int:
                 job.unlink(missing_ok=True)
                 handled += 1
                 continue
-            if isinstance(plan, dict) and plan.get("kind") == "circuit":
+            if isinstance(plan, dict) and plan.get("kind") == "direct":
+                result = direction.make_result(rid, plan)  # display only: applied = 0, no snapshot
+            elif isinstance(plan, dict) and plan.get("kind") == "circuit":
                 if plan.get("action") == "build":
                     lesson_loader.clear()  # one lesson on screen at a time
+                    direction.clear()
                 result = circuit.make_result(rid, plan)
             elif isinstance(plan, dict) and plan.get("kind") == "lesson":
+                direction.clear()
                 result = lesson_loader.make_result(rid, plan, [SHARED, ROOT / "shared"])
             else:
                 result = engine.make_result(rid, plan)
@@ -249,6 +317,8 @@ def start() -> None:
                 traceback.print_exc()
             sys.stdout.flush()
             time.sleep(POLL_SECONDS)
+    if "--stage" in args:  # clean, full-window viewport right away (the lesson camera arrives with a lesson)
+        bpy.app.timers.register(_stage_startup, first_interval=0.3)
     if bpy.app.timers.is_registered(_tick):
         bpy.app.timers.unregister(_tick)
     bpy.app.timers.register(_tick, first_interval=0.5, persistent=True)

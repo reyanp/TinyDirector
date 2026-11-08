@@ -154,3 +154,21 @@ def format_volts(v: float, places: int | None = None) -> str:
     if places is not None:
         return f"{v:.{places}f} V"
     return f"{v:g} V" if v == int(v) else f"{v:.1f} V"
+
+
+E6 = (1.0, 1.5, 2.2, 3.3, 4.7, 6.8)
+
+
+def step_resistance(ohms: float, direction: str) -> float:
+    """'Make it bigger / smaller' without a value: the standard E6 value nearest to 3x (or 1/3) the present one,
+    so the change is clearly visible (330 -> 1,000 Ω, 1,000 -> 330 Ω). Raises CircuitModelError at the ends."""
+    if direction not in ("increase", "decrease"):
+        raise CircuitModelError(f"direction must be increase or decrease, got {direction!r}")
+    goal = ohms * 3 if direction == "increase" else ohms / 3
+    values = [round(m * 10 ** e, 6) for e in range(1, 7) for m in E6]
+    values = [v for v in values if R_MIN_OHM <= v <= R_MAX_OHM
+              and (v > ohms if direction == "increase" else v < ohms)]
+    if not values:
+        raise CircuitModelError(f"the resistor is already at the {'largest' if direction == 'increase' else 'smallest'} "
+                                f"value this lesson shows ({format_ohms(ohms)})")
+    return min(values, key=lambda v: abs(math.log(v / goal)))

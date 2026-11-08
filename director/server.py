@@ -13,6 +13,11 @@ API (JSON):
                               with ?since=<id> or the Last-Event-ID header
   GET  /api/snapshot/<file>   a Blender snapshot from the outbox (name-checked)
   GET  /api/knowledge         the knowledge map: concepts + relations from the SQLite knowledge base
+  POST /api/voice  <audio>    push-to-talk: raw recorded audio (audio/webm, audio/wav, ...) -> speech-to-text ->
+                              the same tutor turn as /api/turn (409 busy, 422 nothing heard)
+  POST /api/tts  {"text"}     Poyo's voice (audio/mpeg) for a tutor reply or a fixed phrase, nothing else
+  POST /api/direct {"focus", "caption"}  stage direction for the lesson on screen (display only, direct_request_v1)
+Voice is transport only (director/voice.py): Nemotron still decides every turn and Poyo speaks the verified reply.
 Every event comes from real execution (director/tutor.py, director/lesson/*). Nothing is simulated for show;
 MOCK / SIMULATED modes are labeled in /api/state and in the UI.
 """
@@ -41,14 +46,21 @@ STATIC = {"/": ("index.html", "text/html; charset=utf-8"), "/index.html": ("inde
 SNAPSHOT_RE = re.compile(r"^[A-Za-z0-9_.-]+\.(jpg|png)$")
 MAX_TEXT = 500
 MAX_EVENTS = 2000
+# what Poyo says between hearing you and answering (spoken only; the answer itself is the verified reply)
+PHRASES = {"ack": ["Okay, let me show you!", "Good question. Let me look.", "On it!", "Let me check the circuit."],
+           "unheard": ["Sorry, I didn't catch that. Could you say it again?"],
+           "busy": ["Hang on, I'm still working on the last one."]}
 
 
 class Session:
     """One learner, one conversation, one Blender scene. Turns run one at a time in a background thread."""
 
-    def __init__(self, client, executor, *, model_label: str, executor_label: str, live: bool, simulated: bool):
-        self.client, self.executor = client, executor
-        self.mode = {"model": model_label, "executor": executor_label, "live": live, "simulated": simulated}
+    def __init__(self, client, executor, *, model_label: str, executor_label: str, live: bool, simulated: bool,
+                 voice=None, voice_error: str | None = None):
+        self.client, self.executor, self.voice = client, executor, voice
+        self.mode = {"model": model_label, "executor": executor_label, "live": live, "simulated": simulated,
+                     "voice": {**voice.info(), "phrases": PHRASES} if voice is not None else
+                     {"error": voice_error or "voice is off", "phrases": PHRASES}}
         self.cond = threading.Condition()
         self.busy = False
         self.turn = 0
@@ -64,7 +76,8 @@ class Session:
     def emit(self, stage: str, status: str, title: str, detail: str = "", /, **data) -> None:
         with self.cond:
             self.seq += 1
-            ev = {"id": self.seq, "turn": self.turn, "t": round(time.time(), 3), "stage": stage, "status": status,
+            turn = self.turn + 1 if data.pop("_next_turn", False) else self.turn  # speech-to-text precedes its turn
+            ev = {"id": self.seq, "turn": turn, "t": round(time.time(), 3), "stage": stage, "status": status,
                   "title": str(title)[:200], "detail": str(detail or "")[:500], "data": _jsonable(data)}
             self.events.append(ev)
             del self.events[:-MAX_EVENTS]
@@ -101,14 +114,14 @@ class Session:
             return [e for e in self.events if e["id"] > since]
 
     # ---- turns ----
-    def start_turn(self, text: str) -> int | None:
+    def start_turn(self, text: str, via: str = "text") -> int | None:
         with self.cond:
             if self.busy:
                 return None
             self.busy = True
             self.turn += 1
             turn = self.turn
-            self.messages.append({"role": "user", "text": text, "turn": turn})
+            self.messages.append({"role": "user", "text": text, "turn": turn, "via": via})
         threading.Thread(target=self._run, args=(text,), daemon=True, name=f"turn-{turn}").start()
         return turn
 
@@ -128,6 +141,32 @@ class Session:
                                         "data": {}})
                 self.busy = False
                 self.cond.notify_all()
+
+    def speakable(self, text: str) -> bool:
+        """Poyo only speaks what the tutor actually said (or a fixed phrase): /api/tts is not a free TTS service."""
+        text = " ".join(text.split())
+        if not text:
+            return False
+        if any(text in group for group in PHRASES.values()):
+            return True
+        with self.cond:
+            return any(m["role"] == "tutor" and text in " ".join(m["text"].split()) for m in self.messages[-20:])
+
+    def direct(self, focus: str | None, caption: str | None) -> tuple[int, dict]:
+        """Stage direction from the browser while Poyo speaks (cue by cue). Display only."""
+        from . import stage
+        if self.busy:
+            return 409, {"error": "a turn is running"}
+        try:
+            req = stage.direct_request(focus=focus, caption=caption, transition_s=0.9)
+        except ValueError as exc:
+            return 400, {"error": str(exc)}
+        try:
+            out = self.executor.send(req, timeout=10)
+        except Exception as exc:  # noqa: BLE001 - a missed camera move never breaks the lesson
+            return 502, {"error": f"{type(exc).__name__}: {str(exc).splitlines()[0][:200]}"}
+        return (200 if out.get("status") == "ok" else 422), {"status": out.get("status"), "errors": out.get("errors", []),
+                                                             "direction": out.get("direction")}
 
     def reset(self) -> bool:
         with self.cond:
@@ -229,6 +268,8 @@ def make_handler(session: Session):
         def do_POST(self):
             url = urlparse(self.path)
             length = int(self.headers.get("Content-Length") or 0)
+            if url.path == "/api/voice":
+                return self._voice(length)
             if length > 10_000:
                 return self._json(413, {"error": "request too large"})
             try:
@@ -247,7 +288,53 @@ def make_handler(session: Session):
                 return self._json(202, {"turn": turn})
             if url.path == "/api/reset":
                 return self._json(200, {"ok": True}) if session.reset() else self._json(409, {"error": "busy"})
+            if url.path == "/api/tts":
+                return self._tts(str(body.get("text", "")))
+            if url.path == "/api/direct":
+                focus, caption = body.get("focus"), body.get("caption")
+                code, out = session.direct(focus if isinstance(focus, str) else None,
+                                           caption if isinstance(caption, str) else None)
+                return self._json(code, out)
             return self._json(404, {"error": "not found"})
+
+        def _voice(self, length: int):
+            from .voice import MAX_AUDIO_BYTES, strip_wake_word
+            if session.voice is None:
+                self.rfile.read(min(length, MAX_AUDIO_BYTES))
+                return self._json(503, {"error": session.mode["voice"]["error"]})
+            if length <= 0 or length > MAX_AUDIO_BYTES:
+                return self._json(413 if length else 400, {"error": "audio missing or larger than 8 MB"})
+            audio = self.rfile.read(length)
+            if session.busy:
+                return self._json(409, {"error": "Poyo is still working on the last question"})
+            mime = self.headers.get("Content-Type") or "audio/webm"
+            session.emit("listen", "start", "Transcribing what you said", session.mode["voice"].get("stt", ""), _next_turn=True)
+            try:
+                heard = session.voice.transcribe(audio, mime)
+            except Exception as exc:  # noqa: BLE001
+                session.emit("listen", "error", "Speech-to-text failed", str(exc)[:300], _next_turn=True)
+                return self._json(502, {"error": str(exc)[:300]})
+            text = " ".join(strip_wake_word(heard).split())[:MAX_TEXT]
+            if not text:
+                session.emit("listen", "info", "Didn't catch that", repr(heard)[:200], _next_turn=True)
+                return self._json(422, {"error": "nothing heard", "heard": heard})
+            session.emit("listen", "ok", f"Heard: “{text}”", "speech-to-text, then the normal tutor turn", _next_turn=True)
+            turn = session.start_turn(text, via="voice")
+            if turn is None:
+                return self._json(409, {"error": "Poyo is still working on the last question", "text": text})
+            return self._json(202, {"turn": turn, "text": text, "heard": heard})
+
+        def _tts(self, text: str):
+            from .voice import cached_speech
+            if session.voice is None:
+                return self._json(503, {"error": session.mode["voice"]["error"]})
+            if not session.speakable(text):
+                return self._json(403, {"error": "Poyo only speaks the tutor's own replies"})
+            try:
+                audio = cached_speech(session.voice, text)
+            except Exception as exc:  # noqa: BLE001
+                return self._json(502, {"error": str(exc)[:300]})
+            return self._send(200, audio, "audio/mpeg")
 
         def _stream(self, url):
             q = parse_qs(url.query)
@@ -272,7 +359,20 @@ def make_handler(session: Session):
     return Handler
 
 
-def make_session(mock: bool, simulate: bool, timeout: float) -> Session:
+def make_voice(mock: bool, enabled: bool = True):
+    """(provider, error). MOCK model -> MOCK voice (offline); otherwise OpenAI if OPENAI_API_KEY is set."""
+    from .voice import FakeVoice, OpenAIVoice
+    if not enabled:
+        return None, "voice is off (--no-voice): type instead"
+    if mock:
+        return FakeVoice(), None
+    try:
+        return OpenAIVoice(), None
+    except ConfigError as exc:
+        return None, str(exc)
+
+
+def make_session(mock: bool, simulate: bool, timeout: float, voice: bool = True) -> Session:
     if mock:
         from .circuit.mock import TutorMockModel
         client, model_label, live = TutorMockModel(), "MOCK model (not Nemotron)", False
@@ -287,8 +387,9 @@ def make_session(mock: bool, simulate: bool, timeout: float) -> Session:
     else:
         from .tutor import BridgeExecutor
         executor, exec_label = BridgeExecutor(timeout), "Blender (live)"
+    provider, voice_error = make_voice(mock, voice)
     return Session(client, executor, model_label=model_label, executor_label=exec_label, live=live,
-                   simulated=simulate)
+                   simulated=simulate, voice=provider, voice_error=voice_error)
 
 
 def serve(session: Session, host: str = "127.0.0.1", port: int = 8765) -> ThreadingHTTPServer:
@@ -306,15 +407,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--mock", action="store_true", help="offline MOCK model (NOT Nemotron)")
     ap.add_argument("--simulate", action="store_true", help="SIMULATED circuit engine instead of Blender")
     ap.add_argument("--timeout", type=float, default=90.0, help="seconds to wait for Blender per request")
+    ap.add_argument("--no-voice", action="store_true", help="no speech-to-text / text-to-speech (type instead)")
     args = ap.parse_args(argv)
     try:
-        session = make_session(args.mock, args.simulate, args.timeout)
+        session = make_session(args.mock, args.simulate, args.timeout, voice=not args.no_voice)
     except ConfigError as exc:
         print(f"CONFIG ERROR: {exc}", file=sys.stderr)
         return 2
     httpd = serve(session, args.host, args.port)
     print(f"Poyo tutor: http://{args.host}:{httpd.server_address[1]}   model: {session.mode['model']}   "
-          f"engine: {session.mode['executor']}", flush=True)
+          f"engine: {session.mode['executor']}   voice: "
+          f"{session.mode['voice'].get('provider') or session.mode['voice']['error']}", flush=True)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

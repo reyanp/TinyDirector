@@ -1,62 +1,87 @@
-// Poyo Lab front end. Everything shown comes from the tutor server: /api/state and the /api/events stream of
-// real execution events (director/events.py). Poyo's mood is driven by those events, never by timers that
-// pretend work is happening.
+// Poyo companion window. Blender's viewport is the stage; this window is Poyo, a push-to-talk microphone,
+// subtitles and a status pill. Everything shown comes from the tutor server: /api/state and the /api/events stream
+// of real execution events (director/events.py). Poyo's mood follows those events and its own voice playback,
+// never timers that pretend work is happening.
+//
+// Voice turn: record (MediaRecorder) -> POST /api/voice (speech-to-text + the normal Nemotron turn) -> the turn's
+// verified reply is spoken (POST /api/tts) while its cues (director/stage.py) point Blender's camera at the part each
+// sentence is about (POST /api/direct). The Type tab runs the same turn from text (debugging fallback).
 "use strict";
 
 const $ = (id) => document.getElementById(id);
 const els = {
-  poyo: $("poyo"), bubble: $("bubble"), chat: $("chat"), input: $("input"), send: $("send"), form: $("composer"),
-  events: $("events"), pipeline: $("pipeline"), modes: $("modes"), live: $("live-dot"), reset: $("reset"),
-  suggestions: $("suggestions"), title: $("lesson-title"), text: $("lesson-text"), meta: $("lesson-meta"),
-  snapWrap: $("snapshot-wrap"), snap: $("snapshot"), kmap: $("kmap"), kmapCard: $("kmap-card"),
-  kmapNote: $("kmap-note"),
+  poyo: $("poyo"), subtitle: $("subtitle"), heard: $("heard"), mic: $("mic"), micHint: $("mic-hint"),
+  status: $("status"), statusText: $("status-text"), live: $("live-dot"), modes: $("modes"), mute: $("mute"),
+  onstage: $("onstage"), title: $("lesson-title"), meta: $("lesson-meta"), drawer: $("drawer"),
+  chat: $("chat"), input: $("input"), send: $("send"), form: $("composer"), reset: $("reset"),
+  suggestions: $("suggestions"), events: $("events"), pipeline: $("pipeline"),
+  kmap: $("kmap"), kmapCard: $("kmap-card"), kmapNote: $("kmap-note"),
 };
 
 const STAGE_LABEL = {
   understand: "understand", scene: "scene", plan: "plan", calculate: "calculate", director: "director",
   builder: "builder", blender: "blender", verify: "verify", load: "load", apply: "blender", explain: "explain",
-  turn: "done", knowledge: "knowledge",
+  turn: "done", knowledge: "knowledge", listen: "listen",
 };
 const PIPELINE = [
-  ["understand", ["understand", "scene"]], ["recall", ["knowledge"]], ["plan", ["plan"]], ["calculate", ["calculate"]],
-  ["build", ["director", "builder", "blender", "load", "apply"]], ["verify", ["verify"]], ["explain", ["explain"]],
+  ["listen", ["listen"]], ["understand", ["understand", "scene"]], ["recall", ["knowledge"]], ["plan", ["plan"]],
+  ["calculate", ["calculate"]], ["build", ["director", "builder", "blender", "load", "apply"]], ["verify", ["verify"]],
+  ["explain", ["explain"]],
 ];
 const SUGGEST_START = ["Teach me why LEDs need resistors.", "How does a voltage divider work?",
-                       "Why would someone use a BJT over a MOSFET?", "How do parallel circuits work?"];
-const SUGGEST_TOPIC = ["Explain that in simpler terms.", "How do parallel circuits work?",
-                       "Teach me why LEDs need resistors."];
-const SUGGEST_CIRCUIT = ["What if the resistor is 1,000 Ω?", "Why did the current decrease?",
-                         "Explain that in simpler terms.", "What happens if I remove the resistor?"];
+                       "How do parallel circuits work?"];
+const SUGGEST_TOPIC = ["Explain that in simpler terms.", "Teach me why LEDs need resistors."];
+const SUGGEST_CIRCUIT = ["What if I make the resistor 1,000 ohms?", "Why did it get dimmer?", "Increase the resistance.",
+                         "Show me the resistor.", "Show me the current.", "Explain that in simpler terms."];
+const IDLE_HINT = "Hi! Ask me how a circuit works.";
+function idleHint() {
+  const kind = state.lesson && (state.lesson.info || {}).kind;
+  if (kind === "circuit") return "Try: “What if I make the resistor 1,000 ohms?” or “Why?”";
+  return state.lesson ? "Ask me about the lesson on stage." : IDLE_HINT;
+}
 
 let state = { mode: {}, busy: false, turn: 0, messages: [], lesson: null, last_event_id: 0,
               knowledge: { active: [], discussed: [] } };
 let renderedMessages = 0;
-let openRows = new Map();      // turn|stage|attempt -> row element still "start"
-let turnStart = new Map();     // turn -> first event time
+let openRows = new Map();
+let turnStart = new Map();
 let lastTurnShown = 0;
 let mood = "idle";
 let moodTimer = null;
+let muted = false;
+try { muted = localStorage.getItem("poyo-muted") === "1"; } catch (e) { /* storage blocked: default on */ }
 
 // ---------------- Poyo ----------------
 function setMood(next, holdMs) {
   clearTimeout(moodTimer);
   mood = next;
   els.poyo.className = `poyo ${next}`;
-  if (holdMs) moodTimer = setTimeout(() => setMood(state.busy ? "thinking" : "idle"), holdMs);
+  if (holdMs) moodTimer = setTimeout(() => setMood(rec ? "listening" : state.busy ? "thinking" : "idle"), holdMs);
 }
-function say(text) {
-  els.bubble.textContent = text || "";
-  els.bubble.classList.toggle("show", Boolean(text));
+let subtitleTimer = null;
+function subtitle(text, opts = {}) {
+  clearTimeout(subtitleTimer);
+  els.subtitle.textContent = text || "";
+  els.subtitle.classList.toggle("dim", Boolean(opts.dim));
+  if (opts.clearAfter) subtitleTimer = setTimeout(() => subtitle(""), opts.clearAfter);
+}
+function heard(text) {
+  if (!text) { els.heard.replaceChildren(); return; }
+  const q = document.createElement("q");
+  q.textContent = text;
+  els.heard.replaceChildren(document.createTextNode("You: "), q);
+}
+function status(text, kind) {
+  els.statusText.textContent = text;
+  els.status.classList.toggle("working", kind === "working");
+  els.status.classList.toggle("error", kind === "error");
 }
 async function loadPoyo() {
   if (els.poyo.querySelector("svg")) return;  // inlined by the server
-  try {
-    const svg = await (await fetch("/poyo.svg")).text();
-    els.poyo.innerHTML = svg;  // our own static asset (served by the tutor server), inlined so CSS can animate it
-  } catch (e) { /* the page still works without the mascot */ }
+  try { els.poyo.innerHTML = await (await fetch("/poyo.svg")).text(); } catch (e) { /* works without the mascot */ }
 }
 
-// ---------------- rendering ----------------
+// ---------------- stage summary (title + calculated chips) ----------------
 function badge(text, cls) {
   const b = document.createElement("span");
   b.className = `badge ${cls}`;
@@ -64,60 +89,69 @@ function badge(text, cls) {
   return b;
 }
 function renderModes() {
+  // MOCK / SIMULATED are always visible; live modes are listed in the Activity tab only (keep the window calm)
   const m = state.mode || {};
-  els.modes.replaceChildren(
-    badge(m.model || "model", m.live ? "live" : "mock"),
-    badge(m.executor || "engine", m.simulated ? "mock" : "live"));
+  const out = [];
+  if (!m.live && m.model) out.push(badge("MOCK model", "mock"));
+  if (m.simulated) out.push(badge("SIMULATED engine", "mock"));
+  const v = m.voice || {};
+  if (v.provider && /MOCK/.test(v.provider)) out.push(badge("MOCK voice", "mock"));
+  els.modes.replaceChildren(...out);
+}
+let lastChips = [];
+function renderLesson() {
+  const l = state.lesson;
+  els.onstage.classList.toggle("empty", !l);
+  if (!l) { els.title.textContent = "Nothing yet"; els.meta.replaceChildren(); lastChips = []; return; }
+  els.title.textContent = l.title;
+  const info = l.info || {};
+  const chip = (t, cls = "") => { const c = document.createElement("span"); c.className = `chip ${cls}`; c.textContent = t; return c; };
+  let chips = [];
+  if (info.kind === "circuit") chips = (info.chips || []).slice(0, 2);   // formatted by the calculation module
+  const nodes = chips.map((t, i) => chip(t, lastChips.length && lastChips[i] !== t ? "changed" : ""));
+  if (info.kind === "topic") nodes.push(chip(`built by ${info.builder}`, "neutral"));
+  els.meta.replaceChildren(...nodes);
+  if (nodes.some((n) => n.classList.contains("changed"))) setTimeout(() => nodes.forEach((n) => n.classList.remove("changed")), 2500);
+  lastChips = chips;
 }
 
+// ---------------- drawer ----------------
+function setDrawer(open) {
+  els.drawer.hidden = !open;
+  els.status.setAttribute("aria-expanded", String(open));
+}
+function showTab(name) {
+  for (const b of els.drawer.querySelectorAll("[role=tab]")) b.setAttribute("aria-selected", String(b.dataset.tab === name));
+  for (const p of els.drawer.querySelectorAll(".tab-panel")) p.hidden = p.id !== `tab-${name}`;
+  if (name === "type") els.input.focus();
+  if (name === "chat") els.chat.parentElement.scrollTop = 1e9;
+}
+els.status.addEventListener("click", () => setDrawer(els.drawer.hidden));
+for (const b of els.drawer.querySelectorAll("[role=tab]")) b.addEventListener("click", () => showTab(b.dataset.tab));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !els.drawer.hidden) setDrawer(false); });
+
+// ---------------- conversation (drawer) ----------------
 function messageEl(m) {
   const d = document.createElement("div");
   d.className = `msg ${m.role}${m.role === "tutor" && m.ok === false ? " failed" : ""}`;
-  if (m.role === "tutor") {
-    const who = document.createElement("span");
-    who.className = "who";
-    who.textContent = "Poyo";
-    const tagText = { mock: "MOCK text", template: "template (model text failed the number check)", error: "error" }[m.source];
-    if (tagText) {
-      const t = document.createElement("span");
-      t.className = "tag";
-      t.textContent = tagText;
-      who.appendChild(t);
-    }
-    d.appendChild(who);
+  const who = document.createElement("span");
+  who.className = "who";
+  who.textContent = m.role === "tutor" ? "Poyo" : m.via === "voice" ? "you (voice)" : "you (typed)";
+  const tagText = { mock: "MOCK text", template: "template (model text failed the number check)", error: "error" }[m.source];
+  if (m.role === "tutor" && tagText) {
+    const t = document.createElement("span");
+    t.className = "tag";
+    t.textContent = tagText;
+    who.appendChild(t);
   }
   const body = document.createElement("span");
   body.className = "body";
-  d.appendChild(body);
-  return [d, body];
+  body.textContent = m.text;
+  d.append(who, body);
+  const g = m.role === "tutor" && m.grounding ? groundingEl(m.grounding) : null;
+  if (g) d.appendChild(g);
+  return d;
 }
-
-function renderEmpty() {
-  if (state.messages.length) return;
-  const e = document.createElement("div");
-  e.className = "empty";
-  const s = document.createElement("strong");
-  s.textContent = "Hi, I'm Poyo!";
-  const p = document.createElement("span");
-  p.textContent = "Ask me how a circuit works. I'll build it in Blender, check the numbers, and explain what you see.";
-  e.append(s, p);
-  els.chat.replaceChildren(e);
-}
-
-function typeOut(target, text) {
-  return new Promise((resolve) => {
-    const cps = Math.max(70, text.length / 6);   // at most ~6 s per reply
-    let i = 0;
-    const t0 = performance.now();
-    function step(now) {
-      const n = Math.min(text.length, Math.floor(((now - t0) / 1000) * cps));
-      if (n > i) { target.textContent = text.slice(0, n); i = n; els.chat.scrollTop = els.chat.scrollHeight; }
-      if (i < text.length) requestAnimationFrame(step); else resolve();
-    }
-    requestAnimationFrame(step);
-  });
-}
-
 // What backs an answer. Retrieval is not verification: only "verified" facts were re-computed by a calculator,
 // and only numbers are machine-checked; the wording is grounded in the listed facts, not proven.
 function groundingEl(g) {
@@ -163,60 +197,20 @@ function groundingEl(g) {
   det.appendChild(note);
   return det;
 }
-
-async function renderMessages(animateLast) {
-  if (!state.messages.length) { renderEmpty(); renderedMessages = 0; return; }
-  if (renderedMessages === 0) els.chat.replaceChildren();
-  const fresh = state.messages.slice(renderedMessages);
-  renderedMessages = state.messages.length;
-  for (const [i, m] of fresh.entries()) {
-    const [d, body] = messageEl(m);
-    els.chat.appendChild(d);
-    els.chat.scrollTop = els.chat.scrollHeight;
-    const isLast = i === fresh.length - 1;
-    if (animateLast && isLast && m.role === "tutor") {
-      setMood("speaking");
-      say("");
-      await typeOut(body, m.text);
-      setMood(m.ok === false ? "error" : "success", 1300);
-    } else {
-      body.textContent = m.text;
-    }
-    const g = m.role === "tutor" && m.grounding ? groundingEl(m.grounding) : null;
-    if (g) { d.appendChild(g); els.chat.scrollTop = els.chat.scrollHeight; }
-  }
-}
-
-function renderLesson() {
-  const l = state.lesson;
-  if (!l) {
-    els.title.textContent = "No lesson yet";
-    els.text.textContent = "Ask Poyo a question and the lesson appears in Blender.";
-    els.meta.replaceChildren();
-    els.snapWrap.hidden = true;
+function renderMessages() {
+  if (!state.messages.length) {
+    const e = document.createElement("p");
+    e.className = "empty";
+    e.textContent = "No conversation yet.";
+    els.chat.replaceChildren(e);
+    renderedMessages = 0;
     return;
   }
-  els.title.textContent = l.title;
-  els.text.textContent = l.explanation || "";
-  const chips = [];
-  const info = l.info || {};
-  const chip = (t, cls = "") => { const c = document.createElement("span"); c.className = `chip ${cls}`; c.textContent = t; return c; };
-  if (info.kind === "circuit") {
-    // strings formatted by the calculation module on the server; the UI never does circuit math
-    for (const t of (info.chips || []).slice(0, 2)) chips.push(chip(t));
-  } else if (info.kind === "topic") {
-    chips.push(chip(`built by ${info.builder}`, "neutral"));
-    if (info.cached) chips.push(chip("cached, verified", "neutral"));
-  }
-  els.meta.replaceChildren(...chips);
-  if (l.snapshot) {
-    els.snap.src = `/api/snapshot/${encodeURIComponent(l.snapshot)}`;
-    els.snapWrap.hidden = false;
-  } else {
-    els.snapWrap.hidden = true;
-  }
+  if (renderedMessages === 0 || renderedMessages > state.messages.length) { els.chat.replaceChildren(); renderedMessages = 0; }
+  for (const m of state.messages.slice(renderedMessages)) els.chat.appendChild(messageEl(m));
+  renderedMessages = state.messages.length;
+  els.chat.parentElement.scrollTop = 1e9;
 }
-
 function renderSuggestions() {
   const kind = state.lesson && (state.lesson.info || {}).kind;
   const list = kind === "circuit" ? SUGGEST_CIRCUIT : kind === "topic" ? SUGGEST_TOPIC : SUGGEST_START;
@@ -225,20 +219,23 @@ function renderSuggestions() {
     b.type = "button";
     b.textContent = t;
     b.disabled = state.busy;
-    b.addEventListener("click", () => send(t));
+    b.addEventListener("click", () => sendText(t));
     return b;
   }));
 }
-
 function setBusy(busy) {
   state.busy = busy;
   els.send.disabled = busy;
   els.input.disabled = busy;
   for (const b of els.suggestions.querySelectorAll("button")) b.disabled = busy;
-  if (!busy) els.input.focus();
+  els.mic.disabled = busy && !rec;
+  els.micHint.replaceChildren(...(busy ? [document.createTextNode("Poyo is working on it…")]
+    : [document.createTextNode("Click or hold "), Object.assign(document.createElement("kbd"), { textContent: "Space" }),
+       document.createTextNode(" and ask Poyo")]));
+  if (!busy && !rec) status("Ready", "");
 }
 
-// ---------------- knowledge map (from the SQLite knowledge base) ----------------
+// ---------------- knowledge map (drawer, from the SQLite knowledge base) ----------------
 const SVG_NS = "http://www.w3.org/2000/svg";
 const DEMO_TEXT = { interactive: "live 3D demo", lesson: "3D lesson template", explanation_only: "explained only (no 3D demo yet)" };
 const nodeEls = new Map();
@@ -251,16 +248,15 @@ function svgEl(tag, attrs) {
 }
 function renderGraph(g) {
   nodeEls.clear(); edgeEls.length = 0;
-  if (!g || !g.nodes || !g.nodes.length) { els.kmapCard.hidden = true; return; }
-  els.kmapCard.hidden = false;
+  if (!g || !g.nodes || !g.nodes.length) { els.kmapNote.textContent = "Knowledge base unavailable."; return; }
   const W = 360, H = 232, NW = 78, NH = 22, PX = 42, PY = 16;
   const pos = new Map(g.nodes.map((n) => [n.id, [PX + n.x * (W - 2 * PX), PY + n.y * (H - 2 * PY)]]));
   graphNames = new Map(g.nodes.map((n) => [n.id, n.name]));
   const edges = svgEl("g");
   for (const e of g.edges) {
-    const [x1, y1] = pos.get(e.dst), [x2, y2] = pos.get(e.src);  // what comes first (left) -> what builds on it
+    const [x1, y1] = pos.get(e.dst), [x2, y2] = pos.get(e.src);
     let d;
-    if (Math.abs(x1 - x2) < 1) {  // same column: bow out to the right
+    if (Math.abs(x1 - x2) < 1) {
       const x = x1 + NW / 2;
       d = `M${x} ${y1} C${x + 24} ${y1} ${x + 24} ${y2} ${x} ${y2}`;
     } else {
@@ -288,8 +284,7 @@ function renderGraph(g) {
     const ask = () => {
       if (state.busy) return;
       els.input.value = `What is ${n.name.replace(/ \(.*\)$/, "")}?`;
-      els.input.focus();
-      setMood("listening");
+      showTab("type");
     };
     grp.addEventListener("click", ask);
     grp.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); ask(); } });
@@ -307,13 +302,13 @@ function highlightGraph() {
     grp.classList.toggle("discussed", discussed.has(id));
   }
   for (const [path, a, b] of edgeEls) path.classList.toggle("lit", active.has(a) && (active.has(b) || discussed.has(b)));
-  els.kmapNote.textContent = [...active].map((id) => graphNames.get(id) || id).join(" · ");
+  if (nodeEls.size) els.kmapNote.textContent = [...active].map((id) => graphNames.get(id) || id).join(" · ") || "Concepts from the knowledge base";
 }
 
-// ---------------- agent activity ----------------
+// ---------------- agent activity (drawer) ----------------
+const turnEvents = new Map();
 function renderPipeline(turn) {
   const evs = turnEvents.get(turn) || [];
-  // stages in the order they ACTUALLY ran this turn (paths differ); stages not reached yet keep the default order
   const firstSeen = (stages) => { const i = evs.findIndex((e) => stages.includes(e.stage)); return i < 0 ? 1e9 : i; };
   const order = PIPELINE.map((p, i) => [p, firstSeen(p[1]), i]).sort((a, b) => a[1] - b[1] || a[2] - b[2]).map((x) => x[0]);
   els.pipeline.replaceChildren(...order.map(([name, stages]) => {
@@ -327,8 +322,6 @@ function renderPipeline(turn) {
     return li;
   }));
 }
-
-const turnEvents = new Map();
 function addEvent(ev) {
   if (!turnEvents.has(ev.turn)) turnEvents.set(ev.turn, []);
   turnEvents.get(ev.turn).push(ev);
@@ -343,10 +336,7 @@ function addEvent(ev) {
   const key = `${ev.turn}|${ev.stage}|${(ev.data && ev.data.attempt) || ""}`;
   let row = ev.status !== "start" ? openRows.get(key) : null;
   if (row) openRows.delete(key);
-  if (!row) {
-    row = document.createElement("li");
-    els.events.appendChild(row);
-  }
+  if (!row) { row = document.createElement("li"); els.events.appendChild(row); }
   if (ev.status === "start") openRows.set(key, row);
   row.className = `ev ${ev.status}`;
   const dot = document.createElement("span");
@@ -369,62 +359,311 @@ function addEvent(ev) {
   time.className = "time";
   time.textContent = `+${Math.max(0, ev.t - turnStart.get(ev.turn)).toFixed(1)}s`;
   row.replaceChildren(dot, main, time);
-  els.events.scrollTop = els.events.scrollHeight;
+  const panel = els.events.parentElement;
+  panel.scrollTop = panel.scrollHeight;
   renderPipeline(ev.turn);
 }
 
+// ---------------- Poyo's voice + stage direction ----------------
+// One speech at a time. `gen` increases on barge-in / a new turn: anything older stops at its next step.
+let gen = 0;
+let speechChain = Promise.resolve();
+let currentAudio = null;
+function voiceAvailable() { return Boolean((state.mode.voice || {}).provider); }
+function stopSpeaking() {
+  gen += 1;
+  speechChain = Promise.resolve();
+  if (currentAudio) { currentAudio.pause(); currentAudio = null; }
+  if (window.speechSynthesis) window.speechSynthesis.cancel();
+  if (mood === "speaking") setMood("idle");
+}
+function enqueueSpeech(text, cues, kind) {
+  const myGen = gen;
+  speechChain = speechChain.then(() => (myGen === gen ? speak(text, cues, kind, myGen) : null)).catch(console.error);
+  return speechChain;
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function ttsAudio(text) {
+  const r = await fetch("/api/tts", { method: "POST", headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ text }) });
+  if (!r.ok) throw new Error(`tts ${r.status}`);
+  const url = URL.createObjectURL(await r.blob());
+  const audio = new Audio(url);
+  audio.addEventListener("ended", () => URL.revokeObjectURL(url), { once: true });
+  await Promise.race([new Promise((res) => audio.addEventListener("loadedmetadata", res, { once: true })), sleep(2500)]);
+  return audio;
+}
+// Cues are timed by their share of the text (speech rate is close to uniform): cue i starts at
+// duration * (characters before it / all characters).
+async function speak(text, cues, kind, myGen) {
+  cues = cues && cues.length ? cues : [{ text, focus: null, caption: null }];
+  const total = cues.reduce((n, c) => n + c.text.length + 1, 0);
+  const starts = [];
+  cues.reduce((n, c) => { starts.push(n / total); return n + c.text.length + 1; }, 0);
+  let fired = -1;
+  const fireUpTo = (frac) => {
+    while (fired + 1 < cues.length && starts[fired + 1] <= frac + 1e-6) { fired += 1; fireCue(cues[fired], kind); }
+  };
+  setMood("speaking");
+  let audio = null;
+  if (!muted && voiceAvailable()) {
+    try { audio = await ttsAudio(text); } catch (e) { audio = null; }
+  }
+  if (myGen !== gen) return;
+  if (audio) {
+    currentAudio = audio;
+    const done = new Promise((res) => { audio.addEventListener("ended", res, { once: true }); audio.addEventListener("error", res, { once: true }); });
+    try { await audio.play(); } catch (e) { audio = null; }   // autoplay blocked: fall through to timed subtitles
+    if (audio) {
+      const dur = isFinite(audio.duration) && audio.duration > 0 ? audio.duration : text.length / 15;
+      fireUpTo(0);
+      while (myGen === gen && !audio.ended && !audio.paused) {
+        fireUpTo(audio.currentTime / dur);
+        await Promise.race([done, sleep(80)]);
+      }
+      currentAudio = null;
+      if (myGen !== gen) return;
+      fireUpTo(1);
+    }
+  }
+  if (!audio && !muted && window.speechSynthesis && !voiceAvailable()) {
+    // browser voice (no OpenAI key): one utterance per cue keeps the camera in step
+    for (const c of cues) {
+      if (myGen !== gen) return;
+      fireCue(c, kind);
+      await new Promise((res) => {
+        const u = new SpeechSynthesisUtterance(c.text);
+        u.rate = 1.02; u.onend = res; u.onerror = res;
+        window.speechSynthesis.speak(u);
+      });
+    }
+  } else if (!audio) {
+    for (const c of cues) {   // muted or no audio: subtitles at reading speed, camera still follows
+      if (myGen !== gen) return;
+      fireCue(c, kind);
+      await sleep(Math.max(1400, c.text.length * 55));
+    }
+  }
+  if (myGen !== gen) return;
+  setMood("success", 900);
+  subtitleTimer = setTimeout(() => { if (myGen === gen && !state.busy && !rec) subtitle(""); }, 6000);
+}
+
+// Stage direction goes through a one-slot queue: at most one request in flight, later cues merge into the next.
+let directBusy = false;
+let directPending = null;
+let lastFocus = null;
+function fireCue(cue, kind) {
+  subtitle(cue.text);
+  if (!kind) return;
+  const body = {};
+  if (cue.focus && cue.focus !== lastFocus) { body.focus = cue.focus; lastFocus = cue.focus; }
+  if (cue.caption) body.caption = cue.caption;
+  if (Object.keys(body).length) direct(body);
+}
+async function direct(body) {
+  if (directBusy) { directPending = { ...(directPending || {}), ...body }; return; }
+  directBusy = true;
+  try {
+    const r = await fetch("/api/direct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!r.ok && r.status !== 409) console.warn("direct", r.status, await r.text());
+  } catch (e) { console.warn(e); }
+  directBusy = false;
+  if (directPending) { const next = directPending; directPending = null; direct(next); }
+}
+
+// ---------------- microphone (push-to-talk) ----------------
+// Click: talk, Poyo stops listening after ~1.2 s of silence (or click again). Hold Space: talk while held.
+let rec = null;
+const MAX_MS = 15000, SILENCE_MS = 1200, NO_SPEECH_MS = 7000;
+async function startListening(hold) {
+  if (rec) return;
+  if (state.busy) { subtitle("I'm still working on the last one…", { dim: true, clearAfter: 2500 }); return; }
+  if (!voiceAvailable()) {
+    subtitle(`Voice is off: ${(state.mode.voice || {}).error || "no speech service"}. Type in the drawer instead.`, { dim: true });
+    setDrawer(true); showTab("type");
+    return;
+  }
+  stopSpeaking();   // barge-in: talking over Poyo stops Poyo
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (e) {
+    subtitle("I can't hear you: the microphone is blocked. Allow it in the address bar, or type instead.", { dim: true });
+    setMood("error", 1100);
+    return;
+  }
+  const mime = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/webm", "audio/ogg"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
+  const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+  const ctx = new AudioContext();
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 1024;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  rec = { stream, recorder, ctx, analyser, chunks: [], hold, t0: performance.now(), spoke: false, lastLoud: 0,
+          floor: null, cancel: false, raf: 0 };
+  recorder.ondataavailable = (e) => { if (e.data && e.data.size) rec && rec.chunks.push(e.data); };
+  recorder.onstop = () => finishListening(rec);
+  recorder.start(200);
+  els.mic.classList.add("listening");
+  els.mic.setAttribute("aria-pressed", "true");
+  els.mic.disabled = false;
+  setMood("listening");
+  status("Listening…", "working");
+  subtitle(hold ? "I'm listening… (let go of Space when you're done)"
+               : "I'm listening… (click the mic again when you're done)", { dim: true });
+  heard("");
+  const buf = new Float32Array(analyser.fftSize);
+  const tick = () => {
+    if (!rec || rec.recorder.state !== "recording") return;
+    analyser.getFloatTimeDomainData(buf);
+    let mean = 0;
+    for (const v of buf) mean += v;
+    mean /= buf.length;
+    let sum = 0;
+    for (const v of buf) sum += (v - mean) * (v - mean);   // without the mic's constant offset (DC)
+    const rms = Math.sqrt(sum / buf.length);
+    const now = performance.now(), el = now - rec.t0;
+    // Background level: skip the switch-on pop (first 300 ms), then follow quiet stretches down quickly and
+    // louder ones up slowly, so a noisy or hot built-in mic still lets speech stand out.
+    if (el > 300) {
+      if (rec.floor === null || rms < rec.floor) rec.floor = rms;
+      else rec.floor += (rms - rec.floor) * 0.004;
+      const loud = rms > Math.max(0.01, rec.floor * 4);
+      if (loud && el > 450) { rec.spoke = true; rec.lastLoud = now; }
+    }
+    const lvl = rec.floor === null ? 0 : (rms - rec.floor) / Math.max(0.02, rec.floor * 4);
+    els.mic.style.setProperty("--level", Math.max(0, Math.min(1, lvl)).toFixed(3));
+    if (el > MAX_MS) return stopListening(false);
+    if (!rec.hold && rec.spoke && now - rec.lastLoud > SILENCE_MS) return stopListening(false);
+    if (!rec.hold && !rec.spoke && el > NO_SPEECH_MS) return stopListening(false);
+    rec.raf = requestAnimationFrame(tick);
+  };
+  rec.raf = requestAnimationFrame(tick);
+}
+function stopListening(cancel) {
+  if (!rec || rec.recorder.state !== "recording") return;
+  rec.cancel = cancel;
+  cancelAnimationFrame(rec.raf);
+  rec.recorder.stop();
+}
+async function finishListening(r) {
+  r.stream.getTracks().forEach((t) => t.stop());
+  r.ctx.close().catch(() => {});
+  rec = null;
+  els.mic.classList.remove("listening");
+  els.mic.setAttribute("aria-pressed", "false");
+  els.mic.style.setProperty("--level", 0);
+  const blob = new Blob(r.chunks, { type: r.recorder.mimeType || "audio/webm" });
+  // Speech detection only decides when to stop listening; whatever was recorded is sent, and speech-to-text decides
+  // whether anything was said (a quiet or unusual mic must never be silently dropped here).
+  if (r.cancel || performance.now() - r.t0 < 600 || blob.size < 1000) {
+    subtitle(r.cancel ? "" : "That was too short. Click the microphone and ask again.", { dim: true, clearAfter: 4000 });
+    setMood("idle"); status("Ready", "");
+    return;
+  }
+  els.mic.classList.add("sending");
+  els.mic.disabled = true;
+  setMood("thinking");
+  status("Transcribing…", "working");
+  subtitle("…", { dim: true });
+  let res, body;
+  try {
+    res = await fetch("/api/voice", { method: "POST", headers: { "Content-Type": blob.type || "audio/webm" }, body: blob });
+    body = await res.json().catch(() => ({}));
+  } catch (e) { res = { status: 0 }; body = { error: String(e) }; }
+  els.mic.classList.remove("sending");
+  if (res.status === 202) {
+    heard(body.text);
+    state.turn = body.turn;
+    state.messages = [...state.messages, { role: "user", text: body.text, turn: body.turn, via: "voice" }];
+    renderMessages();
+    setBusy(true);
+    const phrases = ((state.mode.voice || {}).phrases || {}).ack || [];
+    if (phrases.length) enqueueSpeech(phrases[Math.floor(Math.random() * phrases.length)], null, null);
+    return;
+  }
+  els.mic.disabled = false;
+  const ph = (state.mode.voice || {}).phrases || {};
+  if (res.status === 422) { enqueueSpeech(ph.unheard ? ph.unheard[0] : "Sorry, I didn't catch that.", null, null); }
+  else if (res.status === 409) { enqueueSpeech(ph.busy ? ph.busy[0] : "Hang on, I'm still working on the last one.", null, null); }
+  else { subtitle(`Voice failed: ${body.error || res.status}. You can type instead.`, { dim: true }); setMood("error", 1100); }
+  status("Ready", "");
+}
+els.mic.addEventListener("click", () => (rec ? stopListening(false) : startListening(false)));
+const typing = (e) => e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+document.addEventListener("keydown", (e) => {
+  if (e.code !== "Space" || e.repeat || typing(e)) return;
+  e.preventDefault();
+  if (!rec) startListening(true);
+});
+document.addEventListener("keyup", (e) => {
+  if (e.code !== "Space" || typing(e)) return;
+  e.preventDefault();
+  if (rec && rec.hold) stopListening(false);
+});
+els.mute.addEventListener("click", () => {
+  muted = !muted;
+  els.mute.setAttribute("aria-pressed", String(muted));
+  els.mute.title = muted ? "Unmute Poyo's voice" : "Mute Poyo's voice";
+  try { localStorage.setItem("poyo-muted", muted ? "1" : "0"); } catch (e) { /* ignore */ }
+  if (muted && currentAudio) currentAudio.pause();
+});
+
+// ---------------- events ----------------
 async function onEvent(ev) {
   addEvent(ev);
-  if (ev.turn !== state.turn) return;
+  if (ev.turn !== state.turn && ev.stage !== "listen") return;
   if (ev.stage === "knowledge" && (ev.status === "ok" || ev.status === "info")) {
     state.knowledge = { ...state.knowledge, active: ((ev.data || {}).concepts || []).map((c) => c.id) };
     highlightGraph();
   }
   if (ev.stage === "turn") {
-    await refresh(true);
+    await refresh();
+    const d = ev.data || {};
+    status(ev.status === "ok" ? "Done" : ev.title, ev.status === "ok" ? "" : "error");
+    if (d.scene_changed) lastFocus = null;   // a new or updated scene: the next cue re-aims the camera
+    if (d.reply) enqueueSpeech(d.reply, (d.stage || {}).cues, (d.stage || {}).kind);
+    else if (ev.status === "error") { subtitle(ev.detail || ev.title, { dim: true }); setMood("error", 1100); }
     return;
   }
-  if (ev.status === "start") { setMood("thinking"); say(`${ev.title}…`); }
-  else if (ev.status === "error") { setMood("error", 1100); say(ev.title); }
-  else if (state.busy && mood !== "error") setMood("thinking");
+  if (ev.status === "start") { status(`${ev.title}…`, "working"); if (mood !== "speaking") setMood("thinking"); }
+  else if (ev.status === "error") { status(ev.title, "error"); if (mood !== "speaking") setMood("error", 1100); }
+  else if (ev.stage !== "listen") status(ev.title, "working");
 }
 
-// ---------------- server ----------------
-async function refresh(animate) {
-  const r = await fetch("/api/state");
-  const s = await r.json();
-  const wasBusy = state.busy;
+async function refresh() {
+  const s = await (await fetch("/api/state")).json();
   state = { ...state, ...s };
   renderModes();
   renderLesson();
   renderSuggestions();
   highlightGraph();
   setBusy(s.busy);
-  await renderMessages(animate && wasBusy);
-  if (!s.busy && mood !== "success" && mood !== "error" && mood !== "speaking") { setMood("idle"); }
-  if (!s.busy) say(state.lesson ? "" : "Ask me anything about circuits!");
+  renderMessages();
 }
 
-async function send(text) {
+async function sendText(text) {
   text = (text || "").trim();
   if (!text || state.busy) return;
+  stopSpeaking();
   els.input.value = "";
   setBusy(true);
-  const r = await fetch("/api/turn", { method: "POST", headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ text }) });
+  const r = await fetch("/api/turn", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text }) });
   if (r.status !== 202) {
     const err = await r.json().catch(() => ({}));
-    say(err.error || "Something went wrong");
+    subtitle(err.error || "Something went wrong", { dim: true });
     setMood("error", 1100);
     setBusy(false);
     return;
   }
   const { turn } = await r.json();
   state.turn = turn;
-  state.messages = [...state.messages, { role: "user", text, turn }];
-  await renderMessages(false);
+  state.messages = [...state.messages, { role: "user", text, turn, via: "text" }];
+  renderMessages();
+  heard(text);
   setMood("thinking");
-  say("Thinking…");
+  subtitle("…", { dim: true });
 }
 
 function connect() {
@@ -434,13 +673,10 @@ function connect() {
   es.onmessage = (m) => { try { onEvent(JSON.parse(m.data)); } catch (e) { console.error(e); } };
 }
 
-els.form.addEventListener("submit", (e) => { e.preventDefault(); send(els.input.value); });
-els.input.addEventListener("input", () => {
-  if (!state.busy) setMood(els.input.value.trim() ? "listening" : "idle");
-});
+els.form.addEventListener("submit", (e) => { e.preventDefault(); sendText(els.input.value); });
 els.reset.addEventListener("click", async () => {
   const r = await fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
-  if (r.ok) { renderedMessages = 0; await refresh(false); }
+  if (r.ok) { stopSpeaking(); renderedMessages = 0; heard(""); await refresh(); subtitle(idleHint(), { dim: true }); }
 });
 
 function applyState(s) {
@@ -450,19 +686,22 @@ function applyState(s) {
   renderLesson();
   renderSuggestions();
   setBusy(s.busy);
-  renderMessages(false);
-  say(s.busy ? "Working on it…" : state.lesson ? "" : "Ask me anything about circuits!");
+  renderMessages();
+  els.mute.setAttribute("aria-pressed", String(muted));
+  subtitle(s.busy ? "Working on it…" : idleHint(), { dim: true });
   setMood(s.busy ? "thinking" : "idle");
+  status(s.busy ? "Working…" : "Ready", s.busy ? "working" : "");
 }
 
 (async function init() {
   if (window.__POYO_STATE__) applyState(window.__POYO_STATE__);   // first paint without waiting
   else {
-    setMood("idle");
-    await refresh(false);
-    try { const r = await fetch("/api/knowledge"); renderGraph(r.ok ? await r.json() : null); } catch (e) { renderGraph(null); }
+    try { const r = await fetch("/api/knowledge"); applyState({ ...(await (await fetch("/api/state")).json()), graph: r.ok ? await r.json() : null }); }
+    catch (e) { setMood("idle"); }
   }
   for (const ev of (state.events || [])) addEvent(ev);
+  const tab = location.hash.slice(1);   // /#activity, /#chat, /#knowledge, /#type open the details drawer there
+  if (["activity", "chat", "knowledge", "type"].includes(tab)) { setDrawer(true); showTab(tab); }
   connect();
   await loadPoyo();
 })();
