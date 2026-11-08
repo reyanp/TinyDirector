@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinydirector.local/schema/lesson_spec_v1.json",
+  "title": "TinyDirector lesson spec v1 (written by the Nemotron director, built by the builder agent, checked by the verifier)",
+  "description": "What a lesson scene MUST show. Numbers only via {calc_id.output} placeholders that the director resolves with director/lesson/calculators.py. Part types and pins: blender_engine/lesson_parts.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "title", "question", "calculations", "parts", "connections", "flows", "labels", "key_points", "steps"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "title": { "type": "string", "minLength": 3, "maxLength": 70 },
+    "question": { "type": "string", "maxLength": 300 },
+    "calculations": {
+      "type": "array", "maxItems": 4,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "tool", "args"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$" },
+          "tool": { "type": "string" },
+          "args": { "type": "object" }
+        }
+      }
+    },
+    "parts": {
+      "type": "array", "minItems": 1, "maxItems": 10,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "type", "label"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$" },
+          "type": { "enum": ["battery", "resistor", "led", "npn_bjt", "n_mosfet", "signal", "ground", "switch", "capacitor", "custom"] },
+          "label": { "type": "string", "maxLength": 80 },
+          "pins": { "type": "array", "items": { "type": "string", "pattern": "^[A-Za-z0-9+\\-]{1,8}$" }, "maxItems": 6 },
+          "description": { "type": "string", "maxLength": 300 },
+          "color": { "type": "string", "maxLength": 12 },
+          "group": { "type": "string", "maxLength": 20, "description": "optional: parts with the same group are laid out together (e.g. 'bjt' / 'mosfet' for a side-by-side)" }
+        }
+      }
+    },
+    "connections": {
+      "type": "array", "maxItems": 16,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "from", "to"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$" },
+          "from": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}\\.[A-Za-z0-9+\\-]{1,8}$" },
+          "to": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}\\.[A-Za-z0-9+\\-]{1,8}$" },
+          "color": { "enum": ["red", "black", "orange", "yellow", "blue", "green", "white", "gray", "purple"] }
+        }
+      }
+    },
+    "flows": {
+      "type": "array", "maxItems": 6,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "path", "current_ma", "label"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$" },
+          "path": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "connection ids in the direction of conventional current" },
+          "current_ma": { "type": "string", "pattern": "^\\{[a-z][a-z0-9_]*\\.[A-Za-z0-9_]+\\}$", "description": "placeholder of a *_ma calculator output" },
+          "label": { "type": "string", "maxLength": 60 }
+        }
+      }
+    },
+    "labels": {
+      "type": "array", "maxItems": 10,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "text", "near"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$" },
+          "text": { "type": "string", "maxLength": 120 },
+          "near": { "type": "string", "description": "part id or connection id it annotates" }
+        }
+      }
+    },
+    "key_points": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "maxLength": 110 } },
+    "steps": {
+      "type": "array", "minItems": 1, "maxItems": 5,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["show", "caption"],
+        "properties": {
+          "show": { "type": "array", "items": { "type": "string" }, "description": "part/connection/flow/label ids revealed at this step" },
+          "caption": { "type": "string", "maxLength": 160 }
+        }
+      }
+    }
+  }
+}
