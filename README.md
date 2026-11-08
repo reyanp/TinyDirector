@@ -1,69 +1,122 @@
-# TinyDirector (HackUTD 2026)
+# TinyDirector: Poyo, a 3D tutor you can talk to (HackUTD 2026)
 
-Talk to Blender. NVIDIA Nemotron reads the real scene, plans a constrained set of tool actions as JSON, the plan is validated, Blender executes it, and the resulting scene state feeds the next request. So "turn just the mug blue" changes the mug and nothing else.
+![Poyo's split-reality comparison](docs/whatif/compare.jpg)
 
-- `director/` — Nemotron planner, validator, CLI, inbox/outbox bridge ([director/README.md](director/README.md))
-- `shared/schema/` — the plan + result contract; `shared/ENGINE_CONTRACT.md` — what the Blender side implements
-- `blender_engine/` — Blender executor: worker, procedural assets, Windows launcher ([blender_engine/README.md](blender_engine/README.md))
+Ask Poyo a question out loud and Blender becomes the classroom. **NVIDIA Nemotron** decides what to do with every
+request, builds or changes a real 3D scene, and explains it while the camera follows along. Nothing is
+taken on the model's word. Numbers come from calculation modules, every scene change is checked against what
+Blender reports back, and explanations that state a wrong number or a known misconception are rejected and rewritten.
 
-Quick start: `python -m pytest director/tests -q`, then see director/README.md.
+What you can do today:
 
-## Demo in two terminals (Windows)
-```powershell
-powershell -ExecutionPolicy Bypass -File blender_engine\run_blender.ps1     # terminal 1 (opens Blender)
-python -m director.cli --send --text "Create a red mug next to a tree" --trace   # terminal 2
-python -m director.cli --send --text "Change only the mug to blue" --trace
+- **"Why does an LED need a resistor?"** builds a live circuit. You can change the resistor ("make it 1,000 ohms",
+  "increase the resistance") and the same Blender objects update: labels, color bands, the speed of the current
+  arrows, the LED glow.
+- **What-If Lab.** "Show me what's happening inside this circuit" gives a narrated camera tour with calculated
+  measurements. "Compare what happens with 1,000 ohms" puts a what-if copy side by side with the untouched original.
+- **New electronics lessons on demand.** Ask about BJTs vs MOSFETs, voltage dividers, Ohm's law and so on, and an
+  agent team designs, builds and verifies a brand-new 3D lesson.
+- **Spot the Scam.** A cybersecurity lesson for the T-Mobile challenge: a 3D phone with a fictional scam text,
+  its warning signs, your choice, both outcomes as labeled simulations, and practical next steps.
+- **Knowledge base.** A SQLite knowledge base of concepts, cited facts and common misconceptions grounds every
+  answer, and a knowledge map lights up as you learn.
+
+## How it works
+
+```
+ you (voice or text)                                    Blender (the stage)
+        │                                                        ▲   │ read-back: what is really
+        ▼                                                        │   ▼ on screen, every value
+  Poyo window ──► Nemotron picks ONE tool ──► calculators /   ──► bridge ──► checks: the scene must match
+  (browser)       (validated JSON, 1 retry)   lesson agents       (files)     the request and the calculation
+        ▲                                                                              │
+        └──── Poyo speaks the checked explanation; the camera follows each sentence ◄──┘
 ```
 
-## Demo in two terminals (Linux)
+- **Nemotron** (`nvidia/nemotron-3.5-super-vl-120b-a12b` via build.nvidia.com) does three jobs:
+  - chooses the tool for each turn from the learner's own words and Blender's live scene;
+  - writes the explanations;
+  - directs new lessons and checks renders with its vision model.
+- **Model output is data, never code.**
+  - Tool calls and lesson specs are validated against JSON schemas, with at most one corrective retry.
+  - The only generated code, the lesson builder's, runs in an AST-allowlisted sandbox inside a separate
+    headless Blender.
+- **Blender is the source of truth.** Every turn starts by asking Blender what it is showing. The objects are
+  tracked by id, so "change the resistor" updates the same objects instead of rebuilding.
+- **Honest labels.** Anything mocked or simulated is labeled MOCK / SIMULATED. Retrieved facts are shown as
+  *cited*, not *verified*. The scam detector is labeled a heuristic prototype.
+
+## Run it
+
+Needs Python 3.10+ (developed on 3.12), Blender (developed on 5.2), an NVIDIA API key (`nvapi-...`) and, for voice and the lesson builder, an
+OpenAI key.
+
+**Linux / macOS**
 ```bash
-blender --python blender_engine/worker.py                                      # terminal 1
-source .venv/bin/activate                                                      # terminal 2
-python -m director.cli --send --text "Create a red cube beside a cabin." --trace
-python -m director.cli --send --text "Change the red cube to blue." --trace
-python -m director.cli --send --text "Add a tree and make the cube bounce three times." --trace
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r director/requirements.txt
+cp .env.example .env                      # add NVIDIA_API_KEY (and OPENAI_API_KEY for voice + builder)
+python -m director.studio --blender       # Blender stage + the Poyo window at http://127.0.0.1:8765
 ```
-Press Space in Blender's viewport to play. `docs/phase1_demo.blend` is a saved result of exactly these three
-prompts (regenerate with `python -m director.dev.phase1_e2e`). Phase 1 notes: [docs/PHASE1.md](docs/PHASE1.md).
 
-## Asset library + polished renders (Phase 2)
-![winter diorama](docs/phase2/winter_diorama.png)
+**Windows (PowerShell)**
+```powershell
+python -m venv .venv; .venv\Scripts\activate
+pip install -r director\requirements.txt
+copy .env.example .env                    # then add your keys
+$env:BLENDER = "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"   # if blender is not on PATH
+python -m director.studio --blender
+```
 
-CC0 Poly Haven assets and stylized library meshes, used through the same Nemotron plans. See [docs/PHASE2.md](docs/PHASE2.md) and [docs/ASSETS.md](docs/ASSETS.md).
+Put Blender and the Poyo window side by side. Click the mic (or hold Space) and say:
 
-## Interactive circuit tutor (Phase 3)
-![circuit lesson](docs/circuit/preview.png)
+> "Poyo, teach me why LEDs need resistors." · "What if I make the resistor 1,000 ohms?" · "Why did it get dimmer?" ·
+> "Show me what's happening inside this circuit." · "Compare what happens if I use 1,000 ohms." ·
+> "How does a voltage divider work?" · "Teach me how to recognize scam texts." · "What if I follow the link?"
 
-"Why does an LED need a resistor?": Nemotron picks the tool and explains, a small calculation module produces
-every number, and Blender shows the same circuit updating (labels, resistor color bands, current-flow speed,
-LED glow). Run `blender --python blender_engine/worker.py`, then `python -m director.tutor`.
-See [docs/CIRCUIT_TUTOR.md](docs/CIRCUIT_TUTOR.md).
+You can also type in the drawer's Type tab. To run offline with no keys and no Blender, use
+`python -m director.studio --mock --simulate`; everything is then labeled MOCK / SIMULATED.
 
-## Poyo studio: Blender is the stage, talk to Poyo
-`python -m director.studio --blender` starts Blender as a full-window stage (no panels, through the lesson camera)
-and the Poyo companion at http://127.0.0.1:8765. Put the two windows side by side, click the mic (or hold Space) and
-say "Poyo, teach me why LEDs need resistors." Poyo answers out loud, and the camera follows what it is talking about.
-Follow up with "What if I make the resistor 1,000 ohms?" (the same Blender objects are updated) and "Why did it get
-dimmer?" (explained without touching the scene). Voice uses OpenAI speech-to-text/text-to-speech (`OPENAI_API_KEY`);
-Nemotron still decides every turn. The Type tab in the details drawer is the text fallback. Offline:
-`python -m director.studio --mock --simulate` (labeled MOCK / SIMULATED). See [docs/STUDIO.md](docs/STUDIO.md).
+## Check it
 
-**What-If Lab.** Say "Poyo, show me what's happening inside this circuit" for a camera tour with calculated
-callouts, or "Compare what happens if I increase the resistor to 1,000 ohms" for a side-by-side what-if copy
-(the original stays untouched; "go back to the original" removes it). See [docs/WHATIF.md](docs/WHATIF.md).
+```bash
+python -m pytest director/tests -q                                         # offline test suite
+blender -b --factory-startup --python blender_engine/circuit_check.py     # Blender-side self-tests (also:
+                                                                           #   direction_, compare_, scam_check.py)
+python -m director.dev.whatif_e2e        # live end to end: Nemotron + headless Blender on a private bridge folder
+python -m director.dev.scam_e2e          #   (add --mock for the offline model); also voice_e2e, circuit_e2e
+```
 
-**Spot the Scam.** One cybersecurity lesson for the T-Mobile scam challenge. Say "Poyo, teach me how to recognize scam texts." A 3D phone shows a FICTIONAL suspicious text. Poyo walks through its warning signs (found by a labeled heuristic prototype, not a trained model), asks what you would do, and shows both choices as hypothetical simulations side by side. It ends with practical steps: verify in the official app, report the text to 7726, and recover if you already shared something. See [docs/SCAM_LESSON.md](docs/SCAM_LESSON.md).
+## Repository
 
-## Knowledge base
-A SQLite knowledge base (`director/knowledge/`, built from the reviewed `seed.json`) holds concepts, prerequisites,
-cited facts, common misconceptions, demo templates and links to the calculators and verifiers. Every turn retrieves
-what is relevant for Nemotron, and the Poyo page draws the same database as a knowledge map that lights up as
-concepts are discussed. Retrieval is not verification: numbers are still checked against the calculators, and each
-answer says which facts were calculator-verified and which are only cited. `python -m director.knowledge query "..."`;
-see [docs/KNOWLEDGE.md](docs/KNOWLEDGE.md).
+| Path | What it is |
+|---|---|
+| `director/` | everything that is not Blender: the tutor (`tutor.py`), the Poyo server and studio (`server.py`, `studio.py`), voice (`voice.py`), stage direction cues (`stage.py`) |
+| `director/circuit/` | the LED tutor: tool selection + explanation agent, calculation model, read-back checks |
+| `director/lesson/` | multi-agent lessons: Nemotron director, calculators, OpenAI builder, sandboxed build, verifier |
+| `director/knowledge/` | the SQLite knowledge base (`seed.json` is the reviewed source) |
+| `director/scam/` | Spot the Scam: fictional scenario, heuristic detector + toy evaluation, lesson turns, checks |
+| `blender_engine/` | runs inside Blender: the worker, circuit, comparison, camera direction, scam scene, lesson loader |
+| `frontend/` | the Poyo companion page (Poyo's art is `poyo.svg`) |
+| `shared/schema/` | JSON contracts between the director and Blender |
+| `docs/` | write-ups, renders and saved `.blend` scenes for each feature |
 
-## Multi-agent lessons
-Ask about another electronics idea ("Why would someone use a BJT over a MOSFET?") and an agent team builds a new
-lesson. Nemotron directs (lesson spec), calculators produce every number, an OpenAI builder writes sandboxed
-Blender toolkit code, and a verifier checks Blender's read-back plus a Nemotron vision pass. Only a verified build
-is loaded into your scene. `python -m director.lesson --text "..." --send`; see [docs/MULTI_AGENT.md](docs/MULTI_AGENT.md).
+Detailed docs:
+- [STUDIO.md](docs/STUDIO.md): the Poyo studio and voice
+- [CIRCUIT_TUTOR.md](docs/CIRCUIT_TUTOR.md): the LED tutor
+- [WHATIF.md](docs/WHATIF.md): the What-If Lab
+- [MULTI_AGENT.md](docs/MULTI_AGENT.md): multi-agent lessons
+- [KNOWLEDGE.md](docs/KNOWLEDGE.md): the knowledge base
+- [SCAM_LESSON.md](docs/SCAM_LESSON.md): Spot the Scam
+
+## Where it started
+
+TinyDirector began as "talk to Blender": Nemotron turned requests like "create a red mug next to a tree, then make
+only the mug blue" into validated scene plans. That scene director still works:
+
+```bash
+blender --python blender_engine/worker.py
+python -m director.cli --send --text "Create a red cube beside a cabin."
+```
+
+See [PHASE1.md](docs/PHASE1.md) and [PHASE2.md](docs/PHASE2.md) (CC0 asset library and polished renders).
