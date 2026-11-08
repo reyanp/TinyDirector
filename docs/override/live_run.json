@@ -1,0 +1,2161 @@
+[
+ {
+  "step": 1,
+  "text": "Poyo, override: how do SIM swaps work?",
+  "tool": "teach_anything",
+  "reply": "A scammer takes over your phone number to receive your security codes. You have a phone number and accounts protected by text codes. The scammer tricks your carrier into moving your number to a SIM they control. Security codes now go to the scammer instead of you. The scammer can use those codes to sign in as you. Ask your carrier about SIM-swap protections and never share security codes.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "A scammer takes over your phone number to receive your security codes.",
+    "focus": "overview",
+    "caption": "A scammer takes over your phone number to receive your security codes.",
+    "callout": null
+   },
+   {
+    "text": "You have a phone number and accounts protected by text codes.",
+    "focus": "you",
+    "caption": "You have a phone number and accounts protected by text codes.",
+    "callout": null
+   },
+   {
+    "text": "The scammer tricks your carrier into moving your number to a SIM they control.",
+    "focus": "scammer",
+    "caption": "The scammer tricks your carrier into moving your number to a SIM they\ncontrol.",
+    "callout": null
+   },
+   {
+    "text": "Security codes now go to the scammer instead of you.",
+    "focus": "new_sim",
+    "caption": "Security codes now go to the scammer instead of you.",
+    "callout": null
+   },
+   {
+    "text": "The scammer can use those codes to sign in as you.",
+    "focus": "account",
+    "caption": "The scammer can use those codes to sign in as you.",
+    "callout": null
+   },
+   {
+    "text": "Ask your carrier about SIM-swap protections and never share security codes.",
+    "focus": "overview",
+    "caption": "Ask your carrier about SIM-swap protections and never share security\ncodes.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "overview",
+    "got": "overview",
+    "code": 200
+   },
+   {
+    "want": "you",
+    "got": "you",
+    "code": 200
+   },
+   {
+    "want": "scammer",
+    "got": "scammer",
+    "code": 200
+   },
+   {
+    "want": "new_sim",
+    "got": "new_sim",
+    "code": 200
+   },
+   {
+    "want": "account",
+    "got": "account",
+    "code": 200
+   },
+   {
+    "want": "overview",
+    "got": "overview",
+    "code": 200
+   }
+  ],
+  "lesson": {
+   "kind": "explainer",
+   "title": "How do SIM swaps work?",
+   "chips": [
+    "Generated (OVERRIDE)",
+    "not verified"
+   ],
+   "generated": true
+  },
+  "grounding": {
+   "numbers": "none",
+   "number_check": false,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "credential_theft",
+     "name": "Credential theft",
+     "demo": "interactive"
+    },
+    {
+     "id": "protective_actions",
+     "name": "Protective actions",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "credential_sim_swap",
+     "concept": "credential_theft",
+     "kind": "rule_of_thumb",
+     "text": "With someone's carrier account details, a thief can try to move their phone number to a SIM the thief controls (SIM swap or port-out fraud) and then receive their text-message codes.",
+     "status": "sourced",
+     "source": {
+      "id": "fcc_sim_swap",
+      "title": "FCC Consumer Guide: Protect Yourself From SIM Swapping and Port-Out Fraud",
+      "url": "https://www.fcc.gov/consumers/guides/protect-yourself-sim-swapping-and-port-out-fraud"
+     }
+    },
+    {
+     "id": "credential_def",
+     "concept": "credential_theft",
+     "kind": "definition",
+     "text": "Credential theft means tricking someone into giving away login details such as a password, PIN or one-time code, so the thief can sign in as them.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_social",
+      "title": "CISA: Avoiding Social Engineering and Phishing Attacks",
+      "url": "https://www.cisa.gov/news-events/news/avoiding-social-engineering-and-phishing-attacks"
+     }
+    },
+    {
+     "id": "protect_number",
+     "concept": "protective_actions",
+     "kind": "rule_of_thumb",
+     "text": "If a scammer may control your phone number, contact your carrier from its official number and change your account password; ask about protections against SIM swaps and port-outs.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_scammed",
+      "title": "FTC Consumer Advice: What To Do if You Were Scammed",
+      "url": "https://consumer.ftc.gov/system/files/consumer_ftc_gov/pdf/What%20to%20do%20if%20you%20were%20scammed_EN_0.pdf"
+     }
+    },
+    {
+     "id": "protect_dont_reply",
+     "concept": "protective_actions",
+     "kind": "rule_of_thumb",
+     "text": "Don't reply to an unexpected text or tap its links; report it and delete it instead.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "protect_password",
+     "concept": "protective_actions",
+     "kind": "rule_of_thumb",
+     "text": "If you gave a password away, change it right away, along with any account that reused it, and turn on multi-factor authentication.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_social",
+      "title": "CISA: Avoiding Social Engineering and Phishing Attacks",
+      "url": "https://www.cisa.gov/news-events/news/avoiding-social-engineering-and-phishing-attacks"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "carrier_asks_password",
+    "reply_stop_safe"
+   ],
+   "generated": true
+  },
+  "seconds": 27.4,
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Poyo, override: how do SIM swaps work?"
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No lesson circuit in the scene yet."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "2 concept(s), 5 fact(s)",
+    "detail": "Credential theft, Protective actions"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: teach_anything (OVERRIDE)",
+    "detail": "the learner said override: a generated lesson for any question (model-written, not verified)"
+   },
+   {
+    "stage": "director",
+    "status": "start",
+    "title": "Designing a new lesson",
+    "detail": "OVERRIDE: Nemotron designs a 3D explainer for: How do SIM swaps work?"
+   },
+   {
+    "stage": "director",
+    "status": "ok",
+    "title": "Nemotron designed “How do SIM swaps work?”",
+    "detail": "6 elements, flow layout, 6 narration steps (after 1 repair)"
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Building the generated lesson in Blender",
+    "detail": "explainer_request_v1 build"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: explainer build ok",
+    "detail": "scene v1"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 13/13 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "scene_version": [
+   0,
+   1
+  ],
+  "explainer": {
+   "title": "How do SIM swaps work?",
+   "banner": "Generated lesson (OVERRIDE) · not verified",
+   "legend": "Generated by Nemotron from your question: content is not checked by a calculator or source.",
+   "layout": "flow",
+   "elements": {
+    "you": {
+     "shape": "person",
+     "label": "You",
+     "center": [
+      -9.85,
+      0.0,
+      -0.528
+     ],
+     "animated": false,
+     "box": [
+      0.066,
+      0.428,
+      0.104,
+      0.557
+     ],
+     "in_frame": true
+    },
+    "scammer": {
+     "shape": "person",
+     "label": "Scammer",
+     "center": [
+      -5.91,
+      0.0,
+      -0.528
+     ],
+     "animated": false,
+     "box": [
+      0.216,
+      0.428,
+      0.266,
+      0.557
+     ],
+     "in_frame": true
+    },
+    "carrier": {
+     "shape": "building",
+     "label": "Carrier",
+     "center": [
+      -1.97,
+      0.0,
+      -0.8
+     ],
+     "animated": false,
+     "box": [
+      0.385,
+      0.408,
+      0.445,
+      0.578
+     ],
+     "in_frame": true
+    },
+    "new_sim": {
+     "shape": "cube",
+     "label": "New SIM",
+     "center": [
+      1.97,
+      0.0,
+      -0.375
+     ],
+     "animated": true,
+     "box": [
+      0.544,
+      0.439,
+      0.592,
+      0.547
+     ],
+     "in_frame": true
+    },
+    "code": {
+     "shape": "coin",
+     "label": "Security Code",
+     "center": [
+      5.91,
+      0.0,
+      -0.3
+     ],
+     "animated": true,
+     "box": [
+      0.694,
+      0.439,
+      0.771,
+      0.545
+     ],
+     "in_frame": true
+    },
+    "account": {
+     "shape": "lock",
+     "label": "Your Account",
+     "center": [
+      9.85,
+      0.0,
+      -0.47
+     ],
+     "animated": false,
+     "box": [
+      0.857,
+      0.432,
+      0.934,
+      0.555
+     ],
+     "in_frame": true
+    }
+   },
+   "links": [
+    {
+     "from": "scammer",
+     "to": "carrier",
+     "label": "tricks",
+     "drawn": true
+    },
+    {
+     "from": "carrier",
+     "to": "new_sim",
+     "label": "moves number",
+     "drawn": true
+    },
+    {
+     "from": "new_sim",
+     "to": "code",
+     "label": "receives",
+     "drawn": true
+    },
+    {
+     "from": "code",
+     "to": "account",
+     "label": "signs in",
+     "drawn": true
+    }
+   ],
+   "overlaps": [],
+   "spec": {
+    "title": "How do SIM swaps work?",
+    "summary": "A scammer tricks a carrier into moving your phone number to a SIM they control, then receives your security codes.",
+    "layout": "flow",
+    "elements": [
+     {
+      "id": "you",
+      "label": "You",
+      "shape": "person",
+      "color": "#4cc9f0",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "The phone number owner whose account is targeted"
+     },
+     {
+      "id": "scammer",
+      "label": "Scammer",
+      "shape": "person",
+      "color": "#ff4d6d",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "The attacker trying to take over the number"
+     },
+     {
+      "id": "carrier",
+      "label": "Carrier",
+      "shape": "building",
+      "color": "#f72585",
+      "size": "large",
+      "motion": "none",
+      "glow": false,
+      "note": "The mobile network that controls SIM assignments"
+     },
+     {
+      "id": "new_sim",
+      "label": "New SIM",
+      "shape": "cube",
+      "color": "#7209b7",
+      "size": "small",
+      "motion": "spin",
+      "glow": true,
+      "note": "A SIM card the scammer controls"
+     },
+     {
+      "id": "code",
+      "label": "Security Code",
+      "shape": "coin",
+      "color": "#ffd166",
+      "size": "small",
+      "motion": "bob",
+      "glow": true,
+      "note": "A text-message code used to sign in to accounts"
+     },
+     {
+      "id": "account",
+      "label": "Your Account",
+      "shape": "lock",
+      "color": "#4361ee",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "An online account protected by text-message codes"
+     }
+    ],
+    "links": [
+     {
+      "from": "scammer",
+      "to": "carrier",
+      "label": "tricks"
+     },
+     {
+      "from": "carrier",
+      "to": "new_sim",
+      "label": "moves number"
+     },
+     {
+      "from": "new_sim",
+      "to": "code",
+      "label": "receives"
+     },
+     {
+      "from": "code",
+      "to": "account",
+      "label": "signs in"
+     }
+    ],
+    "narration": [
+     {
+      "focus": "overview",
+      "say": "A scammer takes over your phone number to receive your security codes."
+     },
+     {
+      "focus": "you",
+      "say": "You have a phone number and accounts protected by text codes."
+     },
+     {
+      "focus": "scammer",
+      "say": "The scammer tricks your carrier into moving your number to a SIM they control."
+     },
+     {
+      "focus": "new_sim",
+      "say": "Security codes now go to the scammer instead of you."
+     },
+     {
+      "focus": "account",
+      "say": "The scammer can use those codes to sign in as you."
+     },
+     {
+      "focus": "overview",
+      "say": "Ask your carrier about SIM-swap protections and never share security codes."
+     }
+    ],
+    "key_points": [
+     "A scammer convinces your carrier to move your number to a SIM they control.",
+     "Text-message security codes then go to the scammer instead of you.",
+     "The scammer can use those codes to sign in to your accounts.",
+     "Ask your carrier about SIM-swap protections and never share security codes."
+    ],
+    "simplified": "It does not show every carrier's exact process or every way a scammer might trick them."
+   }
+  }
+ },
+ {
+  "step": 2,
+  "text": "Why does moving the phone number matter so much?",
+  "tool": "explain",
+  "reply": "Moving your phone number matters because text-message security codes then go to the scammer instead of you. With those codes, the scammer can sign in to your accounts as if they were you. Contact your carrier using a number you know is real to ask about protections.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "Moving your phone number matters",
+    "focus": "you",
+    "caption": "Moving your phone number matters",
+    "callout": null
+   },
+   {
+    "text": "because text-message security codes then go to the scammer instead of you.",
+    "focus": "code",
+    "caption": "because text-message security codes then go to the scammer instead of\nyou.",
+    "callout": null
+   },
+   {
+    "text": "With those codes, the scammer can sign in to your accounts as if they were you.",
+    "focus": "scammer",
+    "caption": "With those codes, the scammer can sign in to your accounts as if they\nwere you.",
+    "callout": null
+   },
+   {
+    "text": "Contact your carrier using a number you know is real to ask about protections.",
+    "focus": "you",
+    "caption": "Contact your carrier using a number you know is real to ask about\nprotections.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "you",
+    "got": "you",
+    "code": 200
+   },
+   {
+    "want": "code",
+    "got": "code",
+    "code": 200
+   },
+   {
+    "want": "scammer",
+    "got": "scammer",
+    "code": 200
+   },
+   {
+    "want": "you",
+    "got": "you",
+    "code": 200
+   }
+  ],
+  "lesson": {
+   "kind": "explainer",
+   "title": "How do SIM swaps work?",
+   "chips": [
+    "Generated (OVERRIDE)",
+    "not verified"
+   ],
+   "generated": true
+  },
+  "grounding": {
+   "numbers": "none",
+   "number_check": false,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "credential_theft",
+     "name": "Credential theft",
+     "demo": "interactive"
+    },
+    {
+     "id": "account_verification",
+     "name": "Account verification",
+     "demo": "interactive"
+    },
+    {
+     "id": "current",
+     "name": "Current",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "credential_sim_swap",
+     "concept": "credential_theft",
+     "kind": "rule_of_thumb",
+     "text": "With someone's carrier account details, a thief can try to move their phone number to a SIM the thief controls (SIM swap or port-out fraud) and then receive their text-message codes.",
+     "status": "sourced",
+     "source": {
+      "id": "fcc_sim_swap",
+      "title": "FCC Consumer Guide: Protect Yourself From SIM Swapping and Port-Out Fraud",
+      "url": "https://www.fcc.gov/consumers/guides/protect-yourself-sim-swapping-and-port-out-fraud"
+     }
+    },
+    {
+     "id": "credential_def",
+     "concept": "credential_theft",
+     "kind": "definition",
+     "text": "Credential theft means tricking someone into giving away login details such as a password, PIN or one-time code, so the thief can sign in as them.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_social",
+      "title": "CISA: Avoiding Social Engineering and Phishing Attacks",
+      "url": "https://www.cisa.gov/news-events/news/avoiding-social-engineering-and-phishing-attacks"
+     }
+    },
+    {
+     "id": "verify_independently",
+     "concept": "account_verification",
+     "kind": "rule_of_thumb",
+     "text": "To check an alert, contact the company using a phone number or website you know is real, such as its official app or the number on your bill, not the contact details in the message.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "verify_report_7726",
+     "concept": "account_verification",
+     "kind": "rule_of_thumb",
+     "text": "Forwarding a scam text to 7726 (SPAM) reports it to your wireless provider so it can block similar messages; then delete it.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "conventional_current",
+     "concept": "current",
+     "kind": "definition",
+     "text": "Conventional current is drawn flowing from + to −, opposite to the way the electrons actually move.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_ohms_law",
+      "title": "SparkFun: Voltage, Current, Resistance, and Ohm's Law",
+      "url": "https://learn.sparkfun.com/tutorials/voltage-current-resistance-and-ohms-law"
+     }
+    },
+    {
+     "id": "current_def",
+     "concept": "current",
+     "kind": "definition",
+     "text": "Current is the rate at which electric charge flows past a point, measured in amperes (A); a milliamp (mA) is a thousandth of an amp.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_ohms_law",
+      "title": "SparkFun: Voltage, Current, Resistance, and Ohm's Law",
+      "url": "https://learn.sparkfun.com/tutorials/voltage-current-resistance-and-ohms-law"
+     }
+    },
+    {
+     "id": "current_conserved",
+     "concept": "current",
+     "kind": "law",
+     "text": "Current is not used up: in one loop, the same current that leaves the battery comes back to it. Parts convert energy, not current.",
+     "status": "sourced",
+     "source": {
+      "id": "openstax_cp2e",
+      "title": "OpenStax College Physics 2e, ch. 20 (current, resistance, Ohm's law, power) and ch. 21 (series and parallel)",
+      "url": "https://openstax.org/details/books/college-physics-2e"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "carrier_asks_password",
+    "current_used_up"
+   ],
+   "generated": true
+  },
+  "seconds": 8.4,
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Why does moving the phone number matter so much?"
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. A generated OVERRIDE lesson is on screen (model-written, not verified): 'How do SIM swaps work?', showing You, Scammer, Carrier, New SIM, Security Code, Your Account."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "3 concept(s), 7 fact(s)",
+    "detail": "Credential theft, Account verification, Current"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: explain",
+    "detail": "The user is asking about the SIM swap lesson currently on screen, which is answered from that lesson."
+   },
+   {
+    "stage": "apply",
+    "status": "info",
+    "title": "No scene change",
+    "detail": "answering about the generated lesson on stage"
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "Nemotron answers about the generated lesson"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (consistent with the generated lesson; not verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "scene_version": [
+   1,
+   1
+  ],
+  "explainer": {
+   "title": "How do SIM swaps work?",
+   "banner": "Generated lesson (OVERRIDE) · not verified",
+   "legend": "Generated by Nemotron from your question: content is not checked by a calculator or source.",
+   "layout": "flow",
+   "elements": {
+    "you": {
+     "shape": "person",
+     "label": "You",
+     "center": [
+      -9.85,
+      0.0,
+      -0.528
+     ],
+     "animated": false,
+     "box": [
+      0.066,
+      0.428,
+      0.104,
+      0.557
+     ],
+     "in_frame": true
+    },
+    "scammer": {
+     "shape": "person",
+     "label": "Scammer",
+     "center": [
+      -5.91,
+      0.0,
+      -0.528
+     ],
+     "animated": false,
+     "box": [
+      0.216,
+      0.428,
+      0.266,
+      0.557
+     ],
+     "in_frame": true
+    },
+    "carrier": {
+     "shape": "building",
+     "label": "Carrier",
+     "center": [
+      -1.97,
+      0.0,
+      -0.8
+     ],
+     "animated": false,
+     "box": [
+      0.385,
+      0.408,
+      0.445,
+      0.578
+     ],
+     "in_frame": true
+    },
+    "new_sim": {
+     "shape": "cube",
+     "label": "New SIM",
+     "center": [
+      1.97,
+      0.0,
+      -0.375
+     ],
+     "animated": true,
+     "box": [
+      0.544,
+      0.439,
+      0.592,
+      0.547
+     ],
+     "in_frame": true
+    },
+    "code": {
+     "shape": "coin",
+     "label": "Security Code",
+     "center": [
+      5.91,
+      0.0,
+      -0.3
+     ],
+     "animated": true,
+     "box": [
+      0.694,
+      0.439,
+      0.771,
+      0.545
+     ],
+     "in_frame": true
+    },
+    "account": {
+     "shape": "lock",
+     "label": "Your Account",
+     "center": [
+      9.85,
+      0.0,
+      -0.47
+     ],
+     "animated": false,
+     "box": [
+      0.857,
+      0.432,
+      0.934,
+      0.555
+     ],
+     "in_frame": true
+    }
+   },
+   "links": [
+    {
+     "from": "scammer",
+     "to": "carrier",
+     "label": "tricks",
+     "drawn": true
+    },
+    {
+     "from": "carrier",
+     "to": "new_sim",
+     "label": "moves number",
+     "drawn": true
+    },
+    {
+     "from": "new_sim",
+     "to": "code",
+     "label": "receives",
+     "drawn": true
+    },
+    {
+     "from": "code",
+     "to": "account",
+     "label": "signs in",
+     "drawn": true
+    }
+   ],
+   "overlaps": [],
+   "spec": {
+    "title": "How do SIM swaps work?",
+    "summary": "A scammer tricks a carrier into moving your phone number to a SIM they control, then receives your security codes.",
+    "layout": "flow",
+    "elements": [
+     {
+      "id": "you",
+      "label": "You",
+      "shape": "person",
+      "color": "#4cc9f0",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "The phone number owner whose account is targeted"
+     },
+     {
+      "id": "scammer",
+      "label": "Scammer",
+      "shape": "person",
+      "color": "#ff4d6d",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "The attacker trying to take over the number"
+     },
+     {
+      "id": "carrier",
+      "label": "Carrier",
+      "shape": "building",
+      "color": "#f72585",
+      "size": "large",
+      "motion": "none",
+      "glow": false,
+      "note": "The mobile network that controls SIM assignments"
+     },
+     {
+      "id": "new_sim",
+      "label": "New SIM",
+      "shape": "cube",
+      "color": "#7209b7",
+      "size": "small",
+      "motion": "spin",
+      "glow": true,
+      "note": "A SIM card the scammer controls"
+     },
+     {
+      "id": "code",
+      "label": "Security Code",
+      "shape": "coin",
+      "color": "#ffd166",
+      "size": "small",
+      "motion": "bob",
+      "glow": true,
+      "note": "A text-message code used to sign in to accounts"
+     },
+     {
+      "id": "account",
+      "label": "Your Account",
+      "shape": "lock",
+      "color": "#4361ee",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "An online account protected by text-message codes"
+     }
+    ],
+    "links": [
+     {
+      "from": "scammer",
+      "to": "carrier",
+      "label": "tricks"
+     },
+     {
+      "from": "carrier",
+      "to": "new_sim",
+      "label": "moves number"
+     },
+     {
+      "from": "new_sim",
+      "to": "code",
+      "label": "receives"
+     },
+     {
+      "from": "code",
+      "to": "account",
+      "label": "signs in"
+     }
+    ],
+    "narration": [
+     {
+      "focus": "overview",
+      "say": "A scammer takes over your phone number to receive your security codes."
+     },
+     {
+      "focus": "you",
+      "say": "You have a phone number and accounts protected by text codes."
+     },
+     {
+      "focus": "scammer",
+      "say": "The scammer tricks your carrier into moving your number to a SIM they control."
+     },
+     {
+      "focus": "new_sim",
+      "say": "Security codes now go to the scammer instead of you."
+     },
+     {
+      "focus": "account",
+      "say": "The scammer can use those codes to sign in as you."
+     },
+     {
+      "focus": "overview",
+      "say": "Ask your carrier about SIM-swap protections and never share security codes."
+     }
+    ],
+    "key_points": [
+     "A scammer convinces your carrier to move your number to a SIM they control.",
+     "Text-message security codes then go to the scammer instead of you.",
+     "The scammer can use those codes to sign in to your accounts.",
+     "Ask your carrier about SIM-swap protections and never share security codes."
+    ],
+    "simplified": "It does not show every carrier's exact process or every way a scammer might trick them."
+   }
+  }
+ },
+ {
+  "step": 3,
+  "text": "Explain that in simpler terms.",
+  "tool": "explain",
+  "reply": "A scammer tricks your mobile company into moving your phone number to a SIM card they control. Then text-message security codes go to the scammer instead of you. With those codes, they can sign in to your accounts as if they were you.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "A scammer tricks your mobile company into moving your phone number to a SIM card they control.",
+    "focus": "scammer",
+    "caption": "A scammer tricks your mobile company into moving your phone number to\na SIM card they control.",
+    "callout": null
+   },
+   {
+    "text": "Then text-message security codes go to the scammer instead of you.",
+    "focus": "code",
+    "caption": "Then text-message security codes go to the scammer instead of you.",
+    "callout": null
+   },
+   {
+    "text": "With those codes, they can sign in to your accounts as if they were you.",
+    "focus": "you",
+    "caption": "With those codes, they can sign in to your accounts as if they were\nyou.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "scammer",
+    "got": "scammer",
+    "code": 200
+   },
+   {
+    "want": "code",
+    "got": "code",
+    "code": 200
+   },
+   {
+    "want": "you",
+    "got": "you",
+    "code": 200
+   }
+  ],
+  "lesson": {
+   "kind": "explainer",
+   "title": "How do SIM swaps work?",
+   "chips": [
+    "Generated (OVERRIDE)",
+    "not verified"
+   ],
+   "generated": true
+  },
+  "grounding": {
+   "numbers": "none",
+   "number_check": false,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "credential_theft",
+     "name": "Credential theft",
+     "demo": "interactive"
+    },
+    {
+     "id": "account_verification",
+     "name": "Account verification",
+     "demo": "interactive"
+    },
+    {
+     "id": "current",
+     "name": "Current",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "credential_def",
+     "concept": "credential_theft",
+     "kind": "definition",
+     "text": "Credential theft means tricking someone into giving away login details such as a password, PIN or one-time code, so the thief can sign in as them.",
+     "status": "sourced",
+     "source": {
+      "id": "cisa_social",
+      "title": "CISA: Avoiding Social Engineering and Phishing Attacks",
+      "url": "https://www.cisa.gov/news-events/news/avoiding-social-engineering-and-phishing-attacks"
+     }
+    },
+    {
+     "id": "credential_sim_swap",
+     "concept": "credential_theft",
+     "kind": "rule_of_thumb",
+     "text": "With someone's carrier account details, a thief can try to move their phone number to a SIM the thief controls (SIM swap or port-out fraud) and then receive their text-message codes.",
+     "status": "sourced",
+     "source": {
+      "id": "fcc_sim_swap",
+      "title": "FCC Consumer Guide: Protect Yourself From SIM Swapping and Port-Out Fraud",
+      "url": "https://www.fcc.gov/consumers/guides/protect-yourself-sim-swapping-and-port-out-fraud"
+     }
+    },
+    {
+     "id": "verify_independently",
+     "concept": "account_verification",
+     "kind": "rule_of_thumb",
+     "text": "To check an alert, contact the company using a phone number or website you know is real, such as its official app or the number on your bill, not the contact details in the message.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "verify_report_7726",
+     "concept": "account_verification",
+     "kind": "rule_of_thumb",
+     "text": "Forwarding a scam text to 7726 (SPAM) reports it to your wireless provider so it can block similar messages; then delete it.",
+     "status": "sourced",
+     "source": {
+      "id": "ftc_spam_texts",
+      "title": "FTC Consumer Advice: How to Recognize and Report Spam Text Messages",
+      "url": "https://consumer.ftc.gov/articles/how-recognize-and-report-spam-text-messages"
+     }
+    },
+    {
+     "id": "conventional_current",
+     "concept": "current",
+     "kind": "definition",
+     "text": "Conventional current is drawn flowing from + to −, opposite to the way the electrons actually move.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_ohms_law",
+      "title": "SparkFun: Voltage, Current, Resistance, and Ohm's Law",
+      "url": "https://learn.sparkfun.com/tutorials/voltage-current-resistance-and-ohms-law"
+     }
+    },
+    {
+     "id": "current_def",
+     "concept": "current",
+     "kind": "definition",
+     "text": "Current is the rate at which electric charge flows past a point, measured in amperes (A); a milliamp (mA) is a thousandth of an amp.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_ohms_law",
+      "title": "SparkFun: Voltage, Current, Resistance, and Ohm's Law",
+      "url": "https://learn.sparkfun.com/tutorials/voltage-current-resistance-and-ohms-law"
+     }
+    },
+    {
+     "id": "current_conserved",
+     "concept": "current",
+     "kind": "law",
+     "text": "Current is not used up: in one loop, the same current that leaves the battery comes back to it. Parts convert energy, not current.",
+     "status": "sourced",
+     "source": {
+      "id": "openstax_cp2e",
+      "title": "OpenStax College Physics 2e, ch. 20 (current, resistance, Ohm's law, power) and ch. 21 (series and parallel)",
+      "url": "https://openstax.org/details/books/college-physics-2e"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "carrier_asks_password",
+    "current_used_up"
+   ],
+   "generated": true
+  },
+  "seconds": 8.1,
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Explain that in simpler terms."
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. A generated OVERRIDE lesson is on screen (model-written, not verified): 'How do SIM swaps work?', showing You, Scammer, Carrier, New SIM, Security Code, Your Account."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "3 concept(s), 7 fact(s)",
+    "detail": "Credential theft, Account verification, Current (carried over from the last turn)"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: explain",
+    "detail": "The user asks for a simpler explanation of the SIM swap override lesson currently on screen, which is answered from that lesson without changing the scene."
+   },
+   {
+    "stage": "apply",
+    "status": "info",
+    "title": "No scene change",
+    "detail": "answering about the generated lesson on stage"
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "Nemotron answers about the generated lesson"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (consistent with the generated lesson; not verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "scene_version": [
+   1,
+   1
+  ],
+  "explainer": {
+   "title": "How do SIM swaps work?",
+   "banner": "Generated lesson (OVERRIDE) · not verified",
+   "legend": "Generated by Nemotron from your question: content is not checked by a calculator or source.",
+   "layout": "flow",
+   "elements": {
+    "you": {
+     "shape": "person",
+     "label": "You",
+     "center": [
+      -9.85,
+      0.0,
+      -0.528
+     ],
+     "animated": false,
+     "box": [
+      0.066,
+      0.428,
+      0.104,
+      0.557
+     ],
+     "in_frame": true
+    },
+    "scammer": {
+     "shape": "person",
+     "label": "Scammer",
+     "center": [
+      -5.91,
+      0.0,
+      -0.528
+     ],
+     "animated": false,
+     "box": [
+      0.216,
+      0.428,
+      0.266,
+      0.557
+     ],
+     "in_frame": true
+    },
+    "carrier": {
+     "shape": "building",
+     "label": "Carrier",
+     "center": [
+      -1.97,
+      0.0,
+      -0.8
+     ],
+     "animated": false,
+     "box": [
+      0.385,
+      0.408,
+      0.445,
+      0.578
+     ],
+     "in_frame": true
+    },
+    "new_sim": {
+     "shape": "cube",
+     "label": "New SIM",
+     "center": [
+      1.97,
+      0.0,
+      -0.375
+     ],
+     "animated": true,
+     "box": [
+      0.544,
+      0.439,
+      0.592,
+      0.547
+     ],
+     "in_frame": true
+    },
+    "code": {
+     "shape": "coin",
+     "label": "Security Code",
+     "center": [
+      5.91,
+      0.0,
+      -0.3
+     ],
+     "animated": true,
+     "box": [
+      0.694,
+      0.439,
+      0.771,
+      0.545
+     ],
+     "in_frame": true
+    },
+    "account": {
+     "shape": "lock",
+     "label": "Your Account",
+     "center": [
+      9.85,
+      0.0,
+      -0.47
+     ],
+     "animated": false,
+     "box": [
+      0.857,
+      0.432,
+      0.934,
+      0.555
+     ],
+     "in_frame": true
+    }
+   },
+   "links": [
+    {
+     "from": "scammer",
+     "to": "carrier",
+     "label": "tricks",
+     "drawn": true
+    },
+    {
+     "from": "carrier",
+     "to": "new_sim",
+     "label": "moves number",
+     "drawn": true
+    },
+    {
+     "from": "new_sim",
+     "to": "code",
+     "label": "receives",
+     "drawn": true
+    },
+    {
+     "from": "code",
+     "to": "account",
+     "label": "signs in",
+     "drawn": true
+    }
+   ],
+   "overlaps": [],
+   "spec": {
+    "title": "How do SIM swaps work?",
+    "summary": "A scammer tricks a carrier into moving your phone number to a SIM they control, then receives your security codes.",
+    "layout": "flow",
+    "elements": [
+     {
+      "id": "you",
+      "label": "You",
+      "shape": "person",
+      "color": "#4cc9f0",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "The phone number owner whose account is targeted"
+     },
+     {
+      "id": "scammer",
+      "label": "Scammer",
+      "shape": "person",
+      "color": "#ff4d6d",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "The attacker trying to take over the number"
+     },
+     {
+      "id": "carrier",
+      "label": "Carrier",
+      "shape": "building",
+      "color": "#f72585",
+      "size": "large",
+      "motion": "none",
+      "glow": false,
+      "note": "The mobile network that controls SIM assignments"
+     },
+     {
+      "id": "new_sim",
+      "label": "New SIM",
+      "shape": "cube",
+      "color": "#7209b7",
+      "size": "small",
+      "motion": "spin",
+      "glow": true,
+      "note": "A SIM card the scammer controls"
+     },
+     {
+      "id": "code",
+      "label": "Security Code",
+      "shape": "coin",
+      "color": "#ffd166",
+      "size": "small",
+      "motion": "bob",
+      "glow": true,
+      "note": "A text-message code used to sign in to accounts"
+     },
+     {
+      "id": "account",
+      "label": "Your Account",
+      "shape": "lock",
+      "color": "#4361ee",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "An online account protected by text-message codes"
+     }
+    ],
+    "links": [
+     {
+      "from": "scammer",
+      "to": "carrier",
+      "label": "tricks"
+     },
+     {
+      "from": "carrier",
+      "to": "new_sim",
+      "label": "moves number"
+     },
+     {
+      "from": "new_sim",
+      "to": "code",
+      "label": "receives"
+     },
+     {
+      "from": "code",
+      "to": "account",
+      "label": "signs in"
+     }
+    ],
+    "narration": [
+     {
+      "focus": "overview",
+      "say": "A scammer takes over your phone number to receive your security codes."
+     },
+     {
+      "focus": "you",
+      "say": "You have a phone number and accounts protected by text codes."
+     },
+     {
+      "focus": "scammer",
+      "say": "The scammer tricks your carrier into moving your number to a SIM they control."
+     },
+     {
+      "focus": "new_sim",
+      "say": "Security codes now go to the scammer instead of you."
+     },
+     {
+      "focus": "account",
+      "say": "The scammer can use those codes to sign in as you."
+     },
+     {
+      "focus": "overview",
+      "say": "Ask your carrier about SIM-swap protections and never share security codes."
+     }
+    ],
+    "key_points": [
+     "A scammer convinces your carrier to move your number to a SIM they control.",
+     "Text-message security codes then go to the scammer instead of you.",
+     "The scammer can use those codes to sign in to your accounts.",
+     "Ask your carrier about SIM-swap protections and never share security codes."
+    ],
+    "simplified": "It does not show every carrier's exact process or every way a scammer might trick them."
+   }
+  }
+ },
+ {
+  "step": 4,
+  "text": "Override: how does the water cycle work?",
+  "tool": "teach_anything",
+  "reply": "Water travels in a big loop from Earth to the sky and back again. The sun warms water in the ocean, and it rises into the air as vapor. The vapor cools and turns into clouds. When clouds get full, water falls back down as rain. Rain lands on the ground and plants, then flows back to the ocean to start again. This cycle keeps moving water around our planet over and over.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "Water travels in a big loop from Earth to the sky and back again.",
+    "focus": "overview",
+    "caption": "Water travels in a big loop from Earth to the sky and back again.",
+    "callout": null
+   },
+   {
+    "text": "The sun warms water in the ocean, and it rises into the air as vapor.",
+    "focus": "ocean",
+    "caption": "The sun warms water in the ocean, and it rises into the air as vapor.",
+    "callout": null
+   },
+   {
+    "text": "The vapor cools and turns into clouds.",
+    "focus": "clouds",
+    "caption": "The vapor cools and turns into clouds.",
+    "callout": null
+   },
+   {
+    "text": "When clouds get full, water falls back down as rain.",
+    "focus": "rain",
+    "caption": "When clouds get full, water falls back down as rain.",
+    "callout": null
+   },
+   {
+    "text": "Rain lands on the ground and plants, then flows back to the ocean to start again.",
+    "focus": "ground",
+    "caption": "Rain lands on the ground and plants, then flows back to the ocean to\nstart again.",
+    "callout": null
+   },
+   {
+    "text": "This cycle keeps moving water around our planet over and over.",
+    "focus": "overview",
+    "caption": "This cycle keeps moving water around our planet over and over.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "overview",
+    "got": "overview",
+    "code": 200
+   },
+   {
+    "want": "ocean",
+    "got": "ocean",
+    "code": 200
+   },
+   {
+    "want": "clouds",
+    "got": "clouds",
+    "code": 200
+   },
+   {
+    "want": "rain",
+    "got": "rain",
+    "code": 200
+   },
+   {
+    "want": "ground",
+    "got": "ground",
+    "code": 200
+   },
+   {
+    "want": "overview",
+    "got": "overview",
+    "code": 200
+   }
+  ],
+  "lesson": {
+   "kind": "explainer",
+   "title": "How does the water cycle work?",
+   "chips": [
+    "Generated (OVERRIDE)",
+    "not verified"
+   ],
+   "generated": true
+  },
+  "grounding": {
+   "numbers": "none",
+   "number_check": false,
+   "misconception_check": true,
+   "concepts": [],
+   "facts": [],
+   "given_as_facts": [],
+   "misconceptions": [],
+   "generated": true
+  },
+  "seconds": 17.2,
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Override: how does the water cycle work?"
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. A generated OVERRIDE lesson is on screen (model-written, not verified): 'How do SIM swaps work?', showing You, Scammer, Carrier, New SIM, Security Code, Your Account."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "info",
+    "title": "No matching concept",
+    "detail": ""
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: teach_anything (OVERRIDE)",
+    "detail": "the learner said override: a generated lesson for any question (model-written, not verified)"
+   },
+   {
+    "stage": "director",
+    "status": "start",
+    "title": "Designing a new lesson",
+    "detail": "OVERRIDE: Nemotron designs a 3D explainer for: How does the water cycle work?"
+   },
+   {
+    "stage": "director",
+    "status": "ok",
+    "title": "Nemotron designed “How does the water cycle work?”",
+    "detail": "4 elements, cycle layout, 6 narration steps"
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Building the generated lesson in Blender",
+    "detail": "explainer_request_v1 build"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: explainer build ok",
+    "detail": "scene v2"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 13/13 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "scene_version": [
+   1,
+   2
+  ],
+  "explainer": {
+   "title": "How does the water cycle work?",
+   "banner": "Generated lesson (OVERRIDE) · not verified",
+   "legend": "Generated by Nemotron from your question: content is not checked by a calculator or source.",
+   "layout": "cycle",
+   "elements": {
+    "ocean": {
+     "shape": "sphere",
+     "label": "ocean water",
+     "center": [
+      0.0,
+      0.0,
+      2.837
+     ],
+     "animated": true,
+     "box": [
+      0.472,
+      0.648,
+      0.534,
+      0.8
+     ],
+     "in_frame": true
+    },
+    "clouds": {
+     "shape": "cloud",
+     "label": "clouds",
+     "center": [
+      4.546,
+      0.0,
+      -0.454
+     ],
+     "animated": false,
+     "box": [
+      0.644,
+      0.414,
+      0.697,
+      0.541
+     ],
+     "in_frame": true
+    },
+    "rain": {
+     "shape": "drop",
+     "label": "rain",
+     "center": [
+      0.0,
+      0.0,
+      -3.956
+     ],
+     "animated": false,
+     "box": [
+      0.495,
+      0.201,
+      0.512,
+      0.297
+     ],
+     "in_frame": true
+    },
+    "ground": {
+     "shape": "tree",
+     "label": "ground and plants",
+     "center": [
+      -4.546,
+      0.0,
+      -1.403
+     ],
+     "animated": false,
+     "box": [
+      0.298,
+      0.349,
+      0.371,
+      0.6
+     ],
+     "in_frame": true
+    }
+   },
+   "links": [
+    {
+     "from": "ocean",
+     "to": "clouds",
+     "label": "evaporates",
+     "drawn": true
+    },
+    {
+     "from": "clouds",
+     "to": "rain",
+     "label": "forms",
+     "drawn": true
+    },
+    {
+     "from": "rain",
+     "to": "ground",
+     "label": "falls",
+     "drawn": true
+    },
+    {
+     "from": "ground",
+     "to": "ocean",
+     "label": "flows back",
+     "drawn": true
+    }
+   ],
+   "overlaps": [],
+   "spec": {
+    "title": "How does the water cycle work?",
+    "summary": "Water moves from Earth to the sky and back again in a repeating loop.",
+    "layout": "cycle",
+    "elements": [
+     {
+      "id": "ocean",
+      "label": "ocean water",
+      "shape": "sphere",
+      "color": "#1E90FF",
+      "size": "large",
+      "motion": "bob",
+      "glow": true,
+      "note": "Water on Earth that can evaporate"
+     },
+     {
+      "id": "clouds",
+      "label": "clouds",
+      "shape": "cloud",
+      "color": "#B0C4DE",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "Water vapor that cools and forms clouds"
+     },
+     {
+      "id": "rain",
+      "label": "rain",
+      "shape": "drop",
+      "color": "#4169E1",
+      "size": "small",
+      "motion": "none",
+      "glow": false,
+      "note": "Water falling back to Earth"
+     },
+     {
+      "id": "ground",
+      "label": "ground and plants",
+      "shape": "tree",
+      "color": "#228B22",
+      "size": "medium",
+      "motion": "none",
+      "glow": false,
+      "note": "Where water collects and plants use it"
+     }
+    ],
+    "links": [
+     {
+      "from": "ocean",
+      "to": "clouds",
+      "label": "evaporates"
+     },
+     {
+      "from": "clouds",
+      "to": "rain",
+      "label": "forms"
+     },
+     {
+      "from": "rain",
+      "to": "ground",
+      "label": "falls"
+     },
+     {
+      "from": "ground",
+      "to": "ocean",
+      "label": "flows back"
+     }
+    ],
+    "narration": [
+     {
+      "focus": "overview",
+      "say": "Water travels in a big loop from Earth to the sky and back again."
+     },
+     {
+      "focus": "ocean",
+      "say": "The sun warms water in the ocean, and it rises into the air as vapor."
+     },
+     {
+      "focus": "clouds",
+      "say": "The vapor cools and turns into clouds."
+     },
+     {
+      "focus": "rain",
+      "say": "When clouds get full, water falls back down as rain."
+     },
+     {
+      "focus": "ground",
+      "say": "Rain lands on the ground and plants, then flows back to the ocean to start again."
+     },
+     {
+      "focus": "overview",
+      "say": "This cycle keeps moving water around our planet over and over."
+     }
+    ],
+    "key_points": [
+     "Water evaporates from oceans and lakes into the air.",
+     "Water vapor cools and forms clouds.",
+     "Water falls back to Earth as rain or snow.",
+     "The cycle repeats continuously."
+    ],
+    "simplified": "It leaves out details like transpiration from plants, underground water movement, and different cloud types."
+   }
+  }
+ },
+ {
+  "step": 5,
+  "text": "Teach me why LEDs need resistors.",
+  "tool": "teach_led_resistor",
+  "reply": "The LED only drops about 2 volts, so without a resistor nothing limits the current and the LED would burn out. With the 330 ohm resistor, the resistor takes the remaining 7 volts and sets the current to about 21 milliamps, so the LED shines bright. This is a simplified model where the LED is treated as a fixed 2 volt drop.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "The LED only drops about 2 volts,",
+    "focus": "overview",
+    "caption": "The LED only drops about 2 volts,"
+   },
+   {
+    "text": "so without a resistor nothing limits the current and the LED would burn out.",
+    "focus": "resistor",
+    "caption": "so without a resistor nothing limits the current and the LED would\nburn out."
+   },
+   {
+    "text": "With the 330 ohm resistor,",
+    "focus": "resistor",
+    "caption": "With the 330 ohm resistor,"
+   },
+   {
+    "text": "the resistor takes the remaining 7 volts and sets the current to about 21 milliamps,",
+    "focus": "resistor",
+    "caption": "the resistor takes the remaining 7 volts and sets the current to about\n21 milliamps,"
+   },
+   {
+    "text": "so the LED shines bright.",
+    "focus": "led",
+    "caption": "so the LED shines bright."
+   },
+   {
+    "text": "This is a simplified model where the LED is treated as a fixed 2 volt drop.",
+    "focus": "led",
+    "caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop."
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "overview",
+    "got": "overview",
+    "code": 200
+   },
+   {
+    "want": "resistor",
+    "got": "resistor",
+    "code": 200
+   },
+   {
+    "want": "led",
+    "got": "led",
+    "code": 200
+   }
+  ],
+  "lesson": {
+   "kind": "circuit",
+   "title": "Why does an LED need a resistor?",
+   "resistance_ohm": 330.0,
+   "current_ma": 21.212,
+   "chips": [
+    "R = 330 Ω",
+    "I = 21.2 mA",
+    "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA"
+   ]
+  },
+  "grounding": {
+   "numbers": "calculated",
+   "number_check": true,
+   "misconception_check": true,
+   "concepts": [
+    {
+     "id": "current_limiting",
+     "name": "Current limiting",
+     "demo": "interactive"
+    },
+    {
+     "id": "led",
+     "name": "LED",
+     "demo": "interactive"
+    }
+   ],
+   "facts": [
+    {
+     "id": "limit_formula",
+     "concept": "current_limiting",
+     "kind": "law",
+     "text": "The series resistor takes the rest of the supply voltage and sets the current: I = (V_source − V_LED) / R.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    },
+    {
+     "id": "limit_why",
+     "concept": "current_limiting",
+     "kind": "law",
+     "text": "Because an LED's voltage barely changes once it conducts, nothing in the LED itself limits the current; a series resistor has to set it.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    },
+    {
+     "id": "limit_example_1k",
+     "concept": "current_limiting",
+     "kind": "worked_example",
+     "text": "With the same battery and LED, a 1,000 Ω resistor lowers the current to 7.0 mA, so the LED is dimmer.",
+     "status": "verified",
+     "source": {
+      "id": "td_model",
+      "title": "TinyDirector calculation modules (director/circuit/model.py, director/lesson/calculators.py): the simplified models this tutor computes with",
+      "url": ""
+     }
+    },
+    {
+     "id": "led_direction",
+     "concept": "led",
+     "kind": "definition",
+     "text": "An LED conducts in one direction only, from the anode (+, the longer leg) to the cathode (−, the shorter leg by the flat edge).",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    },
+    {
+     "id": "led_brightness",
+     "concept": "led",
+     "kind": "law",
+     "text": "An LED's brightness follows its current: more current gives more light, up to its rating.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    },
+    {
+     "id": "led_rating",
+     "concept": "led",
+     "kind": "typical_value",
+     "text": "A typical 5 mm indicator LED is rated for about 20 mA of continuous current.",
+     "status": "sourced",
+     "source": {
+      "id": "sf_leds",
+      "title": "SparkFun: Light-Emitting Diodes (LEDs)",
+      "url": "https://learn.sparkfun.com/tutorials/light-emitting-diodes-leds"
+     }
+    }
+   ],
+   "given_as_facts": [],
+   "misconceptions": [
+    "matched_voltage_no_resistor",
+    "resistor_must_be_first"
+   ]
+  },
+  "seconds": 12.8,
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Teach me why LEDs need resistors."
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No LED circuit on screen. A generated OVERRIDE lesson is on screen (model-written, not verified): 'How does the water cycle work?', showing ocean water, clouds, rain, ground and plants."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "2 concept(s), 6 fact(s)",
+    "detail": "Current limiting, LED"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: teach_led_resistor",
+    "detail": "The user wants the LED resistor lesson, so start it and build the 3D circuit."
+   },
+   {
+    "stage": "calculate",
+    "status": "start",
+    "title": "Calculating",
+    "detail": "director/circuit/model.py: I = (V_source - V_LED) / R"
+   },
+   {
+    "stage": "calculate",
+    "status": "ok",
+    "title": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "detail": ""
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Building the circuit in Blender",
+    "detail": "circuit_request_v1 build"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: build ok",
+    "detail": "scene v3"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 10/10 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "numbers are checked against the calculation"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "scene_version": [
+   2,
+   3
+  ],
+  "explainer": null
+ }
+]

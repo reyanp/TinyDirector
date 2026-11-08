@@ -29,17 +29,21 @@ const PIPELINE = [
   ["explain", ["explain"]],
 ];
 const SUGGEST_START = ["Teach me why LEDs need resistors.", "How does a voltage divider work?",
-                       "How do parallel circuits work?", "Teach me how to recognize scam texts."];
+                       "Teach me how to recognize scam texts.", "Override: how do SIM swaps work?"];
 const SUGGEST_TOPIC = ["Explain that in simpler terms.", "Teach me why LEDs need resistors."];
 const SUGGEST_CIRCUIT = ["What if I make the resistor 1,000 ohms?", "Why did it get dimmer?", "Increase the resistance.",
                          "Show me the resistor.", "Show me the current.", "Explain that in simpler terms."];
 const SUGGEST_SCAM = ["What makes that message suspicious?", "What if I follow the link?", "What should I do instead?",
                       "What if I already typed my password?"];
-const IDLE_HINT = "Hi! Ask me how a circuit works.";
+// OVERRIDE (director/explainer/): a lesson Nemotron generates for any question, labeled "not verified"
+const SUGGEST_EXPLAINER = ["Explain that in simpler terms.", "What's the most important part?",
+                           "Override: how do vaccines work?", "Teach me why LEDs need resistors."];
+const IDLE_HINT = "Hi! Ask me how a circuit works, or say “override” and ask me anything.";
 function idleHint() {
   const kind = state.lesson && (state.lesson.info || {}).kind;
   if (kind === "circuit") return "Try: “What if I make the resistor 1,000 ohms?” or “Why?”";
   if (kind === "scam") return "Try: “What makes that message suspicious?”";
+  if (kind === "explainer") return "Ask about this lesson, or say “override” + a new question.";
   return state.lesson ? "Ask me about the lesson on stage." : IDLE_HINT;
 }
 
@@ -112,7 +116,9 @@ function renderLesson() {
   let chips = [];
   if (info.kind === "circuit") chips = (info.chips || []).slice(0, 2);   // formatted by the calculation module
   if (info.kind === "scam") chips = (info.chips || []).slice(0, 3);      // FICTIONAL label, heuristic result, choice
-  const nodes = chips.map((t, i) => chip(t, lastChips.length && lastChips[i] !== t ? "changed" : ""));
+  if (info.kind === "explainer") chips = (info.chips || []).slice(0, 2);  // "Generated (OVERRIDE)", "not verified"
+  const nodes = chips.map((t, i) => chip(t, info.kind === "explainer" ? "unverified"
+    : lastChips.length && lastChips[i] !== t ? "changed" : ""));
   if (info.kind === "topic") nodes.push(chip(`built by ${info.builder}`, "neutral"));
   els.meta.replaceChildren(...nodes);
   if (nodes.some((n) => n.classList.contains("changed"))) setTimeout(() => nodes.forEach((n) => n.classList.remove("changed")), 2500);
@@ -160,15 +166,18 @@ function messageEl(m) {
 // and only numbers are machine-checked; the wording is grounded in the listed facts, not proven.
 function groundingEl(g) {
   const facts = g.facts || [];
-  if (!facts.length && g.numbers === "none") return null;
+  if (!facts.length && g.numbers === "none" && !g.generated) return null;
   const det = document.createElement("details");
   det.className = "grounding";
   const sum = document.createElement("summary");
   const num = document.createElement("span");
-  num.className = g.numbers === "calculated" ? "calc" : g.numbers === "cited" ? "cited" : "";
+  num.className = g.numbers === "calculated" ? "calc" : g.numbers === "cited" ? "cited"
+    : g.generated ? "unverified" : "";
   num.textContent = { calculated: "✓ numbers checked against the calculation",
                       cited: "numbers from cited sources (not calculated)", none: "no numbers to check",
-                      scenario: "numbers only from the lesson's fictional message and guidance" }[g.numbers] || "";
+                      scenario: "numbers only from the lesson's fictional message and guidance",
+                      unverified: "generated lesson (OVERRIDE): content not verified" }[g.numbers]
+    || (g.generated ? "generated lesson (OVERRIDE): content not verified" : "");
   sum.append(num, document.createTextNode(facts.length ? ` · ${facts.length} knowledge-base fact${facts.length > 1 ? "s" : ""}` : ""));
   det.appendChild(sum);
   const ul = document.createElement("ul");
@@ -219,7 +228,7 @@ function renderMessages() {
 function renderSuggestions() {
   const kind = state.lesson && (state.lesson.info || {}).kind;
   const list = kind === "circuit" ? SUGGEST_CIRCUIT : kind === "topic" ? SUGGEST_TOPIC : kind === "scam" ? SUGGEST_SCAM
-    : SUGGEST_START;
+    : kind === "explainer" ? SUGGEST_EXPLAINER : SUGGEST_START;
   els.suggestions.replaceChildren(...list.map((t) => {
     const b = document.createElement("button");
     b.type = "button";

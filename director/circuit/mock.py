@@ -42,10 +42,38 @@ class TutorMockModel:
             content = json.dumps(self._tool(_tag(user, "user_message"), _tag(user, "circuit_state"),
                                             _tag(user, "knowledge")))
         elif system.startswith("EXPLAINER"):
-            content = self._explain(json.loads(user.split("\n", 1)[1].rsplit("\nWrite the explanation now.", 1)[0]))
+            body = user[user.index("FACTS ("):]  # after the optional CONVERSATION block
+            content = self._explain(json.loads(body.split("\n", 1)[1].rsplit("\nWrite the explanation now.", 1)[0]))
+        elif system.startswith("SCENE_DIRECTOR"):
+            content = json.dumps(self._scene(_tag(user, "question")))
         else:
             content = "{}"
         return ModelReply(content=content, model=self.model, live=False)
+
+    @staticmethod
+    def _scene(question: str) -> dict:
+        """OVERRIDE: a fixed 3-step MOCK design around the question (labeled MOCK; no knowledge in it)."""
+        if re.search(r"(?i)\b(bomb|weapon|explosive|poison)\w*", question):
+            return {"refuse": "That's not something I can make a lesson about, but I'm happy to teach you "
+                              "something else."}
+        topic = re.sub(r"[^A-Za-z0-9 '-]", "", question).strip()[:50] or "your question"
+        return {"title": f"MOCK lesson: {topic}"[:60], "summary": "An offline MOCK design: three generic steps.",
+                "layout": "flow",
+                "elements": [{"id": "question", "label": "Your question", "shape": "person", "color": "#7FB8FF",
+                              "size": "medium", "motion": "bob", "note": "what you asked"},
+                             {"id": "idea", "label": "Key idea", "shape": "lamp", "color": "#FFC940",
+                              "size": "large", "motion": "pulse", "glow": True, "note": "the main idea (MOCK)"},
+                             {"id": "takeaway", "label": "Takeaway", "shape": "star", "color": "#6CCB5F",
+                              "size": "medium", "motion": "none", "note": "what to remember (MOCK)"}],
+                "links": [{"from": "question", "to": "idea", "label": "leads to"},
+                          {"from": "idea", "to": "takeaway", "label": "gives"}],
+                "narration": [{"focus": "overview", "say": "This is a MOCK lesson from the offline model, not "
+                                                           "Nemotron."},
+                              {"focus": "question", "say": "It starts with your question."},
+                              {"focus": "idea", "say": "Nemotron would explain the key idea here."},
+                              {"focus": "overview", "say": "Run it live to get a real generated lesson."}],
+                "key_points": ["This is a MOCK lesson.", "A live run asks Nemotron to design the real one."],
+                "simplified": "Everything: this is the offline MOCK design."}
 
     @staticmethod
     def _tool(message: str, state: str, knowledge: str = "") -> dict:
@@ -65,6 +93,9 @@ class TutorMockModel:
                 return {"tool": "scam_choose", "args": {"choice": "follow_link"}, "reason": "follow the link"}
             if re.search(r"\b(suspicious|red flags?|warning signs?|how (can|do) i tell|what makes)\b", low):
                 return {"tool": "scam_inspect", "args": {}, "reason": "warning signs"}
+        if "generated OVERRIDE lesson is on screen" in state and "teach" not in low and (
+                "?" in message or re.search(r"\b(why|what|how|explain|show me|tell me|simpler)\b", low)):
+            return {"tool": "explain", "args": {"question": message}, "reason": "question about the generated lesson"}
         if re.search(r"\b(scam|phishing|smishing|spam text|fraud)\w*", low):
             if scam_on and "?" in message and "teach" not in low:
                 return {"tool": "explain", "args": {"question": message}, "reason": "question about the message"}
@@ -126,6 +157,8 @@ class TutorMockModel:
 
     @staticmethod
     def _explain(f: dict) -> str:
+        if "lesson_on_screen" in f:  # a generated OVERRIDE lesson: its own key points (MOCK)
+            return " ".join(f["lesson_on_screen"]["key_points"][:2])
         if "message_on_screen" in f or "learner_choice" in f or "steps_now" in f:
             return TutorMockModel._scam(f)
         if "now" not in f:

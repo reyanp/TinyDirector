@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinydirector.local/schema/explainer_request_v1.json",
+  "title": "TinyDirector OVERRIDE explainer request v1 (ADDITIVE: does not change any other schema)",
+  "description": "Written by the director to shared/inbox/<request_id>.json when the learner says OVERRIDE. build: a generated explainer scene from a spec Nemotron wrote (data, never code: shapes, layouts and motions come from fixed lists). clear: remove it. The worker answers with a scene_result_v1 document plus 'explainer' and 'direction' read-back blocks (blender_engine/explainer.py). Content is model-written and labeled not verified.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "schema_version",
+    "request_id",
+    "action"
+  ],
+  "properties": {
+    "kind": {
+      "const": "explainer"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_\\-]{1,80}$"
+    },
+    "action": {
+      "enum": [
+        "build",
+        "clear"
+      ]
+    },
+    "spec": {
+      "$ref": "#/$defs/spec"
+    },
+    "banner": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "legend": {
+      "type": "string",
+      "maxLength": 240
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "build"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "spec",
+          "banner",
+          "legend"
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "summary",
+        "layout",
+        "elements",
+        "links",
+        "narration",
+        "key_points"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 60
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 220
+        },
+        "layout": {
+          "enum": [
+            "row",
+            "flow",
+            "cycle",
+            "hub",
+            "stack",
+            "grid"
+          ]
+        },
+        "elements": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "label",
+              "shape",
+              "color"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,23}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 32
+              },
+              "shape": {
+                "enum": [
+                  "cube",
+                  "sphere",
+                  "cylinder",
+                  "cone",
+                  "mug",
+                  "tree",
+                  "rock",
+                  "table",
+                  "chair",
+                  "lamp",
+                  "tent",
+                  "cabin",
+                  "campfire",
+                  "torus",
+                  "pyramid",
+                  "disc",
+                  "cloud",
+                  "drop",
+                  "person",
+                  "building",
+                  "screen",
+                  "coin",
+                  "star",
+                  "gear",
+                  "battery",
+                  "lock",
+                  "shield",
+                  "arrow"
+                ]
+              },
+              "color": {
+                "type": "string",
+                "pattern": "^#[0-9A-Fa-f]{6}$"
+              },
+              "size": {
+                "enum": [
+                  "small",
+                  "medium",
+                  "large"
+                ]
+              },
+              "motion": {
+                "enum": [
+                  "none",
+                  "spin",
+                  "bob",
+                  "pulse"
+                ]
+              },
+              "glow": {
+                "type": "boolean"
+              },
+              "note": {
+                "type": "string",
+                "maxLength": 120
+              }
+            }
+          }
+        },
+        "links": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from",
+              "to"
+            ],
+            "properties": {
+              "from": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,23}$"
+              },
+              "to": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,23}$"
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 22
+              },
+              "color": {
+                "type": "string",
+                "pattern": "^#[0-9A-Fa-f]{6}$"
+              }
+            }
+          }
+        },
+        "narration": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "focus",
+              "say"
+            ],
+            "properties": {
+              "focus": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,23}$"
+              },
+              "say": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 260
+              }
+            }
+          }
+        },
+        "key_points": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 5,
+          "items": {
+            "type": "string",
+            "maxLength": 200
+          }
+        },
+        "simplified": {
+          "type": "string",
+          "maxLength": 200
+        }
+      }
+    }
+  }
+}

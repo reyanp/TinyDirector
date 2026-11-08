@@ -82,6 +82,7 @@ kbd { font: 11px/1 var(--mono); border: 1px solid var(--line); border-bottom-wid
 }
 .chip.changed { box-shadow: 0 0 0 2px rgba(255, 212, 92, 0.55); }
 .chip.neutral { color: var(--muted); border-color: var(--line); }
+.chip.unverified { color: var(--warm); border-color: rgba(255, 212, 92, 0.45); }
 
 /* ---------- Poyo + subtitles ---------- */
 .companion {
@@ -200,6 +201,7 @@ kbd { font: 11px/1 var(--mono); border: 1px solid var(--line); border-bottom-wid
 .grounding[open] summary::before { content: "▾ "; }
 .grounding .calc { color: var(--ok); }
 .grounding .cited { color: var(--warm); }
+.grounding .unverified { color: var(--warm); }
 .grounding ul { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .grounding li { line-height: 1.4; }
 .grounding .st { font: 10px/1 var(--mono); padding: 2px 5px; border-radius: 4px; margin-right: 6px; border: 1px solid var(--line); text-transform: uppercase; letter-spacing: 0.5px; }

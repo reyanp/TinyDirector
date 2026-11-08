@@ -144,7 +144,7 @@ def targets() -> list[str]:
     if _compare_active():
         out += list(COMPARE_TARGETS)
     out += sorted({o["lesson_id"] for o in bpy.data.objects if o.get("lesson_kind") == "part" and o.get("lesson_id")})
-    return out + _scam().targets()
+    return out + [t for m in _stages() for t in m.targets()]
 
 
 def _scam():
@@ -152,9 +152,21 @@ def _scam():
     return scam
 
 
+def _stages() -> list:
+    """Lesson modules with their own direction hooks (targets / objects_for / highlight / caption_obj / WIDE):
+    the Spot the Scam phone and OVERRIDE explainer scenes."""
+    from blender_engine import explainer, scam
+    return [scam, explainer]
+
+
+def _stage_targets() -> list[str]:
+    return [t for m in _stages() for t in m.targets()]
+
+
 def _objects_for(target: str) -> list:
-    if target in _scam().targets():  # the Spot the Scam phone (and its hypothetical outcomes)
-        return _scam().objects_for(target)
+    for m in _stages():  # the Spot the Scam phone / a generated explainer scene
+        if target in m.targets():
+            return m.objects_for(target)
     if target in COMPARE_TARGETS:
         if not _compare_active():
             return []
@@ -261,7 +273,8 @@ def _add_halo(target: str, lo: Vector, hi: Vector):
 # ---------------- caption ----------------
 
 def _caption_obj():
-    return next(iter(_circuit_objects(["label_caption"])), None) or _scam().caption_obj()
+    return next(iter(_circuit_objects(["label_caption"])), None) or next(
+        (c for c in (m.caption_obj() for m in _stages()) if c is not None), None)
 
 
 def _set_caption(text: str) -> bool:
@@ -428,8 +441,10 @@ def apply(req: dict) -> list[str]:
             return ["no lesson camera in the scene"]
         _flow_emphasis(focus == "current")
         scam_t = _scam().targets()
-        if scam_t:  # glowing outline on the message part being discussed (none for overview / outcomes)
-            _scam().highlight(focus)
+        for m in _stages():  # glowing outline / ring on the part being discussed (none for overview)
+            if m.targets():
+                m.highlight(focus)
+        stage_t = _stage_targets()
         if focus == "overview" and (_compare_active() or "outcomes" in scam_t):
             focus_box = _bbox(_objects_for("compare" if _compare_active() else "outcomes"))
             _remove_halo()
@@ -443,13 +458,13 @@ def apply(req: dict) -> list[str]:
             if box is None:
                 return [f"nothing to focus on: {focus!r} is not in the scene (targets: {', '.join(targets())})"]
             halo = None
-            if req.get("highlight", True) and focus not in scam_t and (
+            if req.get("highlight", True) and focus not in stage_t and (
                     focus in HALO or (focus not in CIRCUIT_TARGETS and focus not in COMPARE_TARGETS)):
                 part = _circuit_objects([HALO_PART[focus]]) if focus in HALO_PART else objs
                 halo = _add_halo(focus, *(_bbox(part) or box))
             else:
                 _remove_halo()
-            if focus in COMPARE_TARGETS or focus in _scam().WIDE:
+            if focus in COMPARE_TARGETS or any(focus in m.WIDE and focus in m.targets() for m in _stages()):
                 frame = _framing(cam, *box, WIDE_X, WIDE_Y)
             else:
                 lo, hi = box

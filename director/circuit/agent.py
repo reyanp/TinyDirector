@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import json
 import re
 from dataclasses import dataclass, field
@@ -70,7 +71,9 @@ TOOLS = {
                     "typed my password?', 'I entered my PIN, now what?'): the recovery steps. args: {}",
     "clarify": "The request is not about electronics or the Spot the Scam lesson, or is unsafe or impossible to show "
                "(mains wiring, PCB layout, ...). args: {\"message\": short reply saying what IS possible: this "
-               "lesson's resistor, questions about the circuit, a new electronics topic, or spotting scam texts}",
+               "lesson's resistor, questions about the circuit, a new electronics topic, or spotting scam texts; for "
+               "any other topic, tell the learner they can say \"override\" before their question and Poyo will "
+               "generate a lesson about it}",
 }
 SCAM_TOOLS = ("teach_scam_texts", "scam_inspect", "scam_choose", "scam_recover")
 
@@ -170,6 +173,8 @@ Rules:
   "what should I do instead?" -> scam_choose; "I already typed / clicked / gave ..." -> scam_recover; "go back",
   "back to the message" while the outcomes are shown -> end_comparison; other questions about it -> explain.
   Never use teach_topic for scams (it builds electronics circuits only).
+- When <circuit_state> says a generated OVERRIDE lesson is on screen: questions about it, "show me ..." or "explain
+  that" -> explain (it is answered from that lesson). A new electronics or scam lesson uses its own tool as usual.
 """
 
 EXPLAIN_PROMPT = """EXPLAINER. You are a friendly electronics tutor for complete beginners. The 3D scene has just
@@ -392,6 +397,41 @@ def _clean(text: str) -> str:
     return " ".join(text.split())
 
 
+# The conversation so far ([{"learner": ..., "poyo": ...}], oldest first), set by tutor.run_turn for the turn being
+# answered. Every explanation sees it as CONTEXT (never as a source of numbers) so Poyo stays a continuing
+# conversation: no re-introductions, no copy-pasted sentences, answers that react to what the learner said.
+CONVERSATION: contextvars.ContextVar[tuple] = contextvars.ContextVar("td_conversation", default=())
+CONTINUITY_NOTE = """
+CONVERSATION shows the earlier turns of this conversation (context only: never a source of numbers). It is a
+continuing conversation: do NOT greet the learner or introduce yourself, do NOT repeat sentences you already said,
+and respond to what the learner just said in their own words.
+"""
+_GREETING = re.compile(r"(?i)^\W*(hi|hello|hey|greetings|welcome)\b|\b(i am|i'm|my name is) poyo\b|"
+                       r"\bpoyo here\b|\byour (friendly )?(ai )?tutor\b")
+
+
+def _norm_sentences(text: str) -> list[str]:
+    return [re.sub(r"\W+", " ", s.lower()).strip() for s in re.split(r"(?<=[.!?])\s*", text or "")]
+
+
+def continuity_check(text: str, conversation=None) -> list[str]:
+    """Problems with an explanation given the conversation so far: a greeting / self-introduction after the first
+    turn, or Poyo's last two replies copied word for word (the opening or closing sentence, two or more sentences,
+    or a short reply that is mostly copied). Re-using one sentence in the middle of a rephrased answer is fine."""
+    conversation = list(CONVERSATION.get() if conversation is None else conversation)
+    if not conversation:
+        return []
+    out = []
+    if _GREETING.search(text or ""):
+        out.append("it greets the learner or introduces Poyo again in the middle of the conversation")
+    earlier = {s for turn in conversation[-2:] for s in _norm_sentences(turn.get("poyo", "")) if len(s) >= 30}
+    mine = [s for s in _norm_sentences(text) if s]
+    copied = [s for s in mine if len(s) >= 30 and s in earlier]
+    if copied and (len(copied) >= 2 or mine[0] in copied or mine[-1] in copied or len(mine) <= 2):
+        out.append(f"it repeats, word for word, what Poyo already said: {copied[0]!r}")
+    return out
+
+
 KNOWLEDGE_NOTE = """
 KNOWLEDGE below is trusted background from the tutor's knowledge base. Use it to answer accurately and to gently
 correct a misconception the learner shows. It is NOT a source of numbers: use a number only if it is in FACTS.
@@ -406,10 +446,15 @@ def explain(facts: dict, client: ModelClient, trace: Trace, knowledge: str = "",
     stop so the camera can follow it); same 1 retry, then template.
     `prompt`: a different EXPLAINER system prompt (the Spot the Scam lesson); the checks stay the same.
     `template`: the deterministic fallback text (default: template_explanation(facts))."""
-    system = (prompt or EXPLAIN_PROMPT) + (KNOWLEDGE_NOTE + "KNOWLEDGE:\n" + knowledge if knowledge else "")
+    convo = list(CONVERSATION.get())[-4:]
+    system = (prompt or EXPLAIN_PROMPT) + (CONTINUITY_NOTE if convo else "") + (
+        KNOWLEDGE_NOTE + "KNOWLEDGE:\n" + knowledge if knowledge else "")
+    history = ("CONVERSATION (earlier turns, oldest first; context only, not a source of numbers):\n"
+               + "\n".join(f"learner: {t.get('learner', '')}\nPoyo: {t.get('poyo', '')}" for t in convo) + "\n\n"
+               if convo else "")
     messages = [{"role": "system", "content": system},
-                {"role": "user", "content": ("FACTS (from the lesson's modules):\n" if prompt else
-                                             "FACTS (from the calculation module):\n")
+                {"role": "user", "content": history + ("FACTS (from the lesson's modules):\n" if prompt else
+                                                       "FACTS (from the calculation module):\n")
                                             + json.dumps(facts, indent=1, ensure_ascii=False)
                                             + "\nWrite the explanation now."}]
     rejected: list[str] = []
@@ -421,18 +466,20 @@ def explain(facts: dict, client: ModelClient, trace: Trace, knowledge: str = "",
         bad = number_check(text, facts)
         too_long = len(text.split()) > 90
         wrong = claim_check(text) if claim_check and text and not bad and not too_long else []
+        if text and not bad and not too_long and not wrong and reply.live:  # MOCK text is deterministic rules
+            wrong = [f"conversation rule: {c}" for c in continuity_check(text, convo)]
         shape = shape_check(text) if shape_check and text and not bad and not too_long and not wrong else None
         trace.add("explain", f"{'LIVE' if reply.live else 'MOCK'} {reply.model} explanation attempt {attempt} "
                              f"({reply.latency_s:.1f}s): "
                              + ("numbers verified against the calculation" if not bad and text and not too_long
                                 and not wrong and not shape else
-                                f"rejected ({'empty' if not text else 'too long' if too_long else 'states a known misconception: ' + '; '.join(wrong) if wrong else shape if shape else 'numbers not in facts: ' + ', '.join(bad)})"))
+                                f"rejected ({'empty' if not text else 'too long' if too_long else 'states a known misconception or breaks a rule: ' + '; '.join(wrong) if wrong else shape if shape else 'numbers not in facts: ' + ', '.join(bad)})"))
         if text and not bad and not too_long and not wrong and not shape:
             return Explanation(text, "nemotron" if reply.live else "mock", attempt, rejected)
         rejected.append(text)
         if attempt == 1:
             problem = ("it used numbers that are not in FACTS: " + ", ".join(bad)) if bad else \
-                      ("it states a known misconception: " + "; ".join(wrong)) if wrong else \
+                      ("it states a known misconception or breaks a rule: " + "; ".join(wrong)) if wrong else \
                       shape if shape else \
                       ("it was empty" if not text else "it was too long")
             messages = messages + [{"role": "assistant", "content": reply.content[:2000]},

@@ -30,13 +30,14 @@ from jsonschema import Draft202012Validator
 from . import bridge, paths
 from .circuit import check
 from .events import noop
-from .circuit.agent import SCAM_TOOLS, ToolError, _tokens, choose_tool, describe_state, explain, facts_for
+from .circuit.agent import CONVERSATION, SCAM_TOOLS, ToolError, _tokens, choose_tool, describe_state, explain, facts_for
 from .circuit.display import (circuit_request, compare_clear_request, compare_request, equation_text, title_for,
                               wrap_caption)
 from .circuit.model import (CircuitModelError, LedCircuit, check_resistance, format_ma, format_ohms, format_volts,
                             solve, step_resistance)
 from . import stage
 from .scam import lesson as scam_lesson
+from .explainer import lesson as explainer_lesson
 from .nemotron_client import ConfigError, ModelCallError, NemotronClient
 from .planner import new_request_id
 from .trace import Trace
@@ -79,6 +80,22 @@ def _executor_name(out: dict) -> str:
 # "explain that in simpler terms", "again?", "I don't get it": a reaction to the last answer, not a new question
 FOLLOW_UP_RE = re.compile(r"\b(simpler|simply|again|rephrase|repeat|eli5|another way|don'?t (get|understand)|"
                           r"didn'?t (get|understand)|what do you mean|explain (that|it|this)|in other words)\b", re.I)
+
+
+# OVERRIDE: "Poyo, override: how do SIM swaps work?" (or "..., override") -> a generated lesson for ANY question
+# (director/explainer/). Said alone ("override"), the NEXT turn is the question.
+OVERRIDE_RE = re.compile(r"^\W*(?:(?:hey|hi|ok(?:ay)?)\s+)?(?:(?:poyo|poio|pollo|boyo)\W+)?over[\s-]?ride\b\W*(.*)$",
+                         re.I | re.S)
+OVERRIDE_END_RE = re.compile(r"^(.*?)[\s,.:;!-]+over[\s-]?ride\W*$", re.I | re.S)
+
+
+def override_question(text: str) -> str | None:
+    """The question after (or before) the OVERRIDE keyword; "" when only the keyword was said; None = no OVERRIDE."""
+    m = OVERRIDE_RE.match(text or "") or OVERRIDE_END_RE.match(text or "")
+    if not m:
+        return None
+    q = " ".join(m.group(1).split()).strip(" ,.:;-")
+    return (q[:1].upper() + q[1:]) if q else ""
 
 
 def _retrieve(text: str, context: dict, follow_up: bool, emit, trace: Trace):
@@ -132,6 +149,21 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
     caller across turns) carries the last explanation so follow-ups like "simpler, please" have something to
     refer to. CLI behavior is unchanged."""
     context = context if context is not None else {}
+    outer_emit = emit
+
+    def emit(stage, status, title, detail="", /, **data):  # remember what Poyo said (conversation memory)
+        if stage == "turn" and data.get("reply"):
+            context["dialogue"] = (list(context.get("dialogue", [])) + [{"learner": text, "poyo": data["reply"]}])[-6:]
+        outer_emit(stage, status, title, detail, **data)
+
+    token = CONVERSATION.set(tuple(context.get("dialogue", [])))
+    try:
+        return _run_turn(text, client, executor, history, show_trace, emit, context)
+    finally:
+        CONVERSATION.reset(token)
+
+
+def _run_turn(text: str, client, executor, history: list[str], show_trace: bool, emit, context: dict) -> int:
     rid = new_request_id()
     trace = Trace(rid, text)
     trace.add("intent", f"user said: {text!r}")
@@ -149,11 +181,19 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
         (context.get("topic") or {}).get("title") if before.get("lesson") else None)
     comparing = before.get("compare") if (before.get("compare") or {}).get("active") and current is not None else None
     scam_sc = scam_lesson.on_stage(before)  # the Spot the Scam phone (director/scam/lesson.py)
-    scene_text = scam_lesson.describe(scam_sc) if scam_sc else describe_state(current, lesson_on_stage, focus, comparing)
+    expl_sc = explainer_lesson.on_stage(before)  # a generated OVERRIDE lesson (director/explainer/)
+    scene_text = (scam_lesson.describe(scam_sc) if scam_sc else explainer_lesson.describe(expl_sc) if expl_sc
+                  else describe_state(current, lesson_on_stage, focus, comparing))
     trace.add("read_world", f"{_executor_name(before)}: {scene_text}")
     emit("scene", "ok", "Scene read", f"{_executor_name(before)}: {scene_text}",
          executor=_executor_name(before), simulated=before.get("executor") == "simulated")
 
+    pending = context.pop("override_pending", False)
+    ov = override_question(text)
+    if ov is None and pending and text.strip():
+        ov = text.strip()  # "Override." then the question
+    if ov is not None:
+        return _override(ov, text, client, executor, before, history, show_trace, emit, context, trace)
     follow_up_text = bool(FOLLOW_UP_RE.search(text))
     kb, kn = _retrieve(text, context, follow_up_text, emit, trace)
     emit("plan", "start", "Choosing what to do", f"{'Nemotron' if client.live else 'MOCK model'} picks one tool")
@@ -174,6 +214,11 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
          live=call.live, attempts=call.attempts)
     history.append(f"{text} -> {call.tool} {json.dumps(call.args)}")
 
+    if expl_sc and not scam_sc:
+        code = explainer_lesson.run(call, text, client, executor, before, kb, kn, trace, emit, context,
+                                    follow_up_text, show_trace)
+        if code is not None:
+            return code
     if call.tool == "clarify":
         print(f"\nTutor: {call.args['message']}")
         trace.add("execute", "skipped: request is outside the lesson")
@@ -361,6 +406,28 @@ def run_turn(text: str, client, executor, history: list[str], show_trace: bool =
     return code
 
 
+def _override(question: str, text: str, client, executor, before: dict, history: list[str], show_trace: bool,
+              emit, context: dict, trace: Trace) -> int:
+    """OVERRIDE: skip the tool selector; Nemotron designs a lesson for the question (labeled not verified)."""
+    history.append(f"{text} -> OVERRIDE")
+    if not question:
+        reply = "Override is on. What would you like a lesson about?"
+        context["override_pending"] = True
+        trace.add("intent", "OVERRIDE said alone: the next turn is the question")
+        trace.save()
+        emit("plan", "ok", "OVERRIDE", "waiting for the question", tool="teach_anything", args={})
+        emit("turn", "ok", "Answered", "", reply=reply, source="template", scene_changed=False)
+        return 0
+    trace.add("intent", f"OVERRIDE: generate a lesson for {question!r}")
+    kb, kn = _retrieve(question, {}, False, emit, trace)
+    emit("plan", "ok", "Tool: teach_anything (OVERRIDE)",
+         "the learner said override: a generated lesson for any question (model-written, not verified)",
+         tool="teach_anything", args={"question": question}, model="Nemotron" if client.live else "MOCK model",
+         live=client.live, attempts=0)
+    return explainer_lesson.generate(question, text, client, executor, before, kb, kn, trace, emit, context,
+                                     show_trace)
+
+
 def _scene_caption(action, current, target, before_sol, after_sol) -> str:
     """Subtitle shown while the explanation is being written: calculated values only."""
     if action == "update" and current is not None and current.resistance_ohm != target.resistance_ohm:
@@ -441,7 +508,7 @@ def _send(executor, req: dict, emit, timeout: float | None = None) -> tuple[dict
 
 
 def _explained(facts: dict, client, kb, kn, trace: Trace, emit, detail: str, shape_check=None, prompt=None,
-               claim_check=None, template: str | None = None):
+               claim_check=None, template: str | None = None, ready: str = "Explanation ready (numbers verified)"):
     emit("explain", "start", "Writing the explanation", detail)
     kb_check = _claim_check(kb)
     checks = [c for c in (kb_check, claim_check) if c]
@@ -453,7 +520,7 @@ def _explained(facts: dict, client, kb, kn, trace: Trace, emit, detail: str, sha
         from .circuit.agent import Explanation, template_explanation
         trace.add("explain", f"model call failed ({exc}); using the deterministic template")
         expl = Explanation(template or template_explanation(facts), "template")
-    emit("explain", "ok", {"nemotron": "Explanation ready (numbers verified)", "mock": "MOCK explanation ready",
+    emit("explain", "ok", {"nemotron": ready, "mock": "MOCK explanation ready",
                            "template": "Template explanation (model text failed the checks)"}[expl.source],
          "", source=expl.source, attempts=expl.attempts)
     label = {"nemotron": "", "mock": " [MOCK explanation]",

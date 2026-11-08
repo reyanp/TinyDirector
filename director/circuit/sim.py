@@ -47,6 +47,9 @@ class SimulatedCircuitExecutor:
                 "circuit": copy.deepcopy(self.state["circuit"])}
 
     def _targets(self) -> list[str]:
+        ex = self.state.get("explainer")
+        if ex:
+            return ["overview", "scene"] + [e["id"] for e in ex["spec"]["elements"]]
         sc = self.state.get("scam")
         if sc:
             return ["overview"] + list(SCAM_TARGETS) + (list(SCAM_OUTCOME_TARGETS) if sc["outcomes"]["active"] else [])
@@ -83,7 +86,36 @@ class SimulatedCircuitExecutor:
         if self.state.get("scam"):
             out["scam"] = copy.deepcopy(self.state["scam"])
             out["direction"] = self._direction()
+        if self.state.get("explainer"):
+            out["explainer"] = copy.deepcopy(self.state["explainer"])
+            out["direction"] = self._direction()
         return out
+
+    def _explainer_request(self, req: dict) -> dict:
+        """SIMULATED OVERRIDE explainer scene (blender_engine/explainer.py): records what Blender would draw (labels,
+        arrows, keyed motion) from the request; draws nothing and measures no layout."""
+        rid = req["request_id"]
+        if req["action"] == "clear":
+            self.state.pop("explainer", None)
+        else:
+            sp = req["spec"]
+            self.state.update(circuit=None)
+            self.state.pop("compare", None)
+            self.state.pop("scam", None)
+            self.state["explainer"] = {
+                "present": True, "title": sp["title"], "banner": req["banner"], "legend": req["legend"],
+                "layout": sp["layout"], "spec": copy.deepcopy(sp), "overlaps": [], "highlight": None,
+                "elements": {e["id"]: {"shape": e["shape"], "label": e["label"], "center": [0, 0, 0],
+                                       "animated": e.get("motion", "none") != "none", "box": [0, 0, 1, 1],
+                                       "in_frame": True} for e in sp["elements"]},
+                "links": [{"from": ln["from"], "to": ln["to"], "label": ln.get("label", ""), "drawn": True}
+                          for ln in sp["links"]]}
+            self.state["direction"] = {"focus": None, "caption": None}
+        self.state["scene_version"] += 1
+        self._save()
+        return {**self._result(rid, "ok", 1), "explainer": copy.deepcopy(self.state.get("explainer")
+                                                                         or {"present": False}),
+                "direction": self._direction()}
 
     def _scam_request(self, req: dict) -> dict:
         """SIMULATED Spot the Scam scene (blender_engine/scam.py): records what Blender would draw; draws nothing."""
@@ -148,7 +180,8 @@ class SimulatedCircuitExecutor:
     def _direct(self, req: dict) -> dict:
         """SIMULATED stage direction (blender_engine/direction.py): records focus + caption, moves no camera."""
         rid = req["request_id"]
-        if not (self.state["circuit"] or {}).get("present") and not self.state.get("scam"):
+        if not (self.state["circuit"] or {}).get("present") and not self.state.get("scam") \
+                and not self.state.get("explainer"):
             return self._result(rid, "error", 0, ["nothing on stage to direct"])
         focus = req.get("focus")
         if focus is not None and focus not in self._targets():
@@ -169,7 +202,11 @@ class SimulatedCircuitExecutor:
         if req.get("kind") == "compare":
             return self._compare_request(req)
         if req.get("kind") == "scam":
+            if req.get("action") == "build":
+                self.state.pop("explainer", None)  # like the worker: one lesson on stage at a time
             return self._scam_request(req)
+        if req.get("kind") == "explainer":
+            return self._explainer_request(req)
         rid = req["request_id"]
         circ = self.state["circuit"]
         if req["action"] == "update" and not (circ and circ.get("present")):
@@ -177,6 +214,7 @@ class SimulatedCircuitExecutor:
         self.state.pop("compare", None)  # like the worker: a circuit request ends a comparison first
         if req["action"] == "build":
             self.state.pop("scam", None)  # like Blender: building the circuit clears the Spot the Scam phone
+            self.state.pop("explainer", None)  # ... and a generated OVERRIDE lesson
         if req["action"] == "build":
             self.state["direction"] = {"focus": None, "caption": None}
         if req["action"] == "build" or circ is None:

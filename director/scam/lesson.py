@@ -265,10 +265,10 @@ def teach(text: str, client, executor, before: dict, kb, kn, trace: Trace, emit=
              "message_on_screen": _message_facts(),
              "lesson_plan": "first look for warning signs together, then the learner decides what they would do, "
                             "then both hypothetical outcomes are shown side by side",
-             "teaching_goal": "welcome the learner in 2 short sentences: say the phone shows a FICTIONAL text that "
-                              "claims to be from their carrier, and that scam texts copy real alerts, so you'll "
-                              "look closely before deciding. Do NOT list the warning signs yet and do NOT ask a "
-                              "question (Poyo asks one next).",
+             "teaching_goal": "reply to the learner's request in 2 short sentences, in your own words: the phone "
+                              "now shows a FICTIONAL text that claims to be from their carrier, and real scam texts "
+                              "copy real alerts, so it pays to look closely before acting. Do NOT list the warning "
+                              "signs yet and do NOT ask a question (Poyo asks one next).",
              "key_points": _template("This phone shows a fictional text that claims to come from your carrier.",
                                      "Scam texts copy real alerts, so let's look closely before deciding anything.")}
     expl = _say(facts, client, kb, kn, trace, emit, "Nemotron introduces the fictional message",
@@ -353,10 +353,10 @@ def choose(choice: str, text: str, client, executor, before: dict, kb, kn, trace
                                 "nothing was sent or collected",
              "safe_steps": ACTIONS_BEFORE + [ACTION_NO_PASSWORD]}
     if choice == "follow_link":
-        facts["teaching_goal"] = ("in 3 or 4 short sentences: say this is a hypothetical simulation; the link opens a "
-                                  "look-alike page and anything typed there goes straight to the scammer, risking "
-                                  "account takeover or a SIM swap; then the safer choice on the right: open your "
-                                  "carrier's official app yourself, and forward the text to 7726 (SPAM).")
+        facts["teaching_goal"] = ("in 3 or 4 short sentences, reacting to how the learner put it: this is a "
+                                  "hypothetical simulation (left side); what the look-alike page would do with what "
+                                  "they type and what the scammer could then do; then the safer choice on the right "
+                                  "(open the carrier's official app yourself, report the text to 7726).")
         facts["key_points"] = _template(
             "This is a hypothetical simulation: the link opens a look-alike page, not your carrier's site.",
             "Anything you type there, like your PIN or password, goes straight to the scammer, who could take over "
@@ -364,10 +364,10 @@ def choose(choice: str, text: str, client, executor, before: dict, kb, kn, trace
             "The safer choice is on the right: open your carrier's official app yourself, and forward the text to "
             "7726 (SPAM).")
     else:
-        facts["teaching_goal"] = ("in 3 or 4 short sentences: say it is a good choice and a hypothetical simulation; "
-                                  "opening the official app yourself checks the alert without touching the link, and "
-                                  "here it shows no alerts; then report the text by forwarding it to 7726 (SPAM) and "
-                                  "delete it. Mention that the left side shows what the link would have done.")
+        facts["teaching_goal"] = ("in 3 or 4 short sentences, reacting to how the learner put it: why checking "
+                                  "independently in the official app is safe (it never uses the message's link) and "
+                                  "what it shows here (hypothetical simulation, right side); how to report the text to "
+                                  "7726 and delete it; the left side shows what the link would have done.")
         facts["key_points"] = _template(
             "Good choice: in this hypothetical simulation you open your carrier's official app yourself, without "
             "touching the link.",

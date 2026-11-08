@@ -118,6 +118,21 @@ brand/body/urgency/link/outcomes/outcome_a/outcome_b, amber outlines instead of 
 read-back. Checks: `blender -b --factory-startup --python blender_engine/scam_check.py`,
 `python -m director.dev.scam_e2e [--mock]` (private bridge `shared/state/scam_run`). Do not add more scenarios.
 
+## OVERRIDE: generated lessons for any question (director/explainer/, docs/OVERRIDE.md)
+Keyword, not a tool choice: `tutor.override_question` ("Poyo, override: ..." / "..., override"; "override" alone ->
+next turn is the question) skips the tool selector -> `explainer/agent.py` Nemotron SCENE_DIRECTOR writes a spec
+(JSON data: shapes/layouts/motions from fixed lists, 2-7 elements, links, narration steps with focus, key points)
+or `{"refuse": ...}`; `spec.py` schema (`shared/schema/explainer_request_v1.json`, additive) + lint (ids, links,
+focus, <=130 words, no URLs/phone numbers/markdown) + KB claim check + continuity, 1 retry, else nothing built ->
+`{"kind":"explainer"}` -> `blender_engine/explainer.py` deterministic builder (objects carry `circuit_part`, so
+`circuit.clear` removes them; direction targets `scene` + element ids, amber rings) -> `check.py` read-back (labels
+exact, shapes, links, motion, spec stored = hard; in-frame/overlaps = warnings). Reply = narration, cues = step focus.
+While on stage: `explain`/`focus_camera` -> `lesson.explain_question` from the spec Blender read back. Content is
+NOT verified: banner/legend/chips/grounding say so. Conversation memory for every lesson: `agent.CONVERSATION`
+(set in `tutor.run_turn`) + `continuity_check` (no greeting after turn 1, no copied opening/closing sentence).
+Checks: `blender -b --factory-startup --python blender_engine/explainer_check.py`, `python -m
+director.dev.explainer_e2e [--mock]` (private bridge `shared/state/explainer_run`).
+
 ## Knowledge base (P1: director/knowledge/, docs/KNOWLEDGE.md)
 `seed.json` (reviewed, in git) -> SQLite `<shared>/state/knowledge.sqlite` (`TD_KNOWLEDGE_DB`; auto-rebuilt when the
 seed changes; tests use a tmp DB via conftest). `python -m director.knowledge build|stats|query "..."|graph`.
@@ -173,6 +188,7 @@ python -m director.server [--mock --simulate]           # Poyo companion UI at h
 python -m director.studio --blender                    # Blender stage (-- --stage) + Poyo voice companion
 python -m director.dev.voice_e2e [--mock]              # voice demo end-to-end (synthesized speech, private bridge)
 python -m director.dev.scam_e2e [--mock]               # Spot the Scam end-to-end (6 turns, private bridge)
+python -m director.dev.explainer_e2e [--mock]          # OVERRIDE end-to-end (5 turns, private bridge)
 blender -b --factory-startup --python blender_engine/direction_check.py   # camera focus / halo / caption checks
 python -m director.knowledge query "..."               # knowledge-base retrieval (what Nemotron is given)
 ```
