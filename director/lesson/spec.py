@@ -68,6 +68,59 @@ def _nets(spec: dict) -> dict[str, int]:
     return {pin: roots.setdefault(find(pin), len(roots)) for pin in list(parent)}
 
 
+def _placeholder_hints(spec: dict, numbers: list[str]) -> str:
+    """Suggest the placeholder whose value matches a hand-typed number: '5' -> {sw.V_drive} (value '5 V')."""
+    out = []
+    for n in numbers:
+        for c in spec.get("calculations", []):
+            try:
+                res = run_calc(c["tool"], c["args"])
+            except Exception:  # noqa: BLE001 - hints are best effort
+                continue
+            match = next((k for k, v in res.items() if isinstance(v, str) and k != "assumptions"
+                          and re.match(rf"^{re.escape(n)}(?![\d.,])", v)), None)
+            if match:
+                out.append(f"{{{c['id']}.{match}}} for {n!r} (value {res[match]!r}, unit included)")
+                break
+    return "; ".join(out)
+
+
+def autofix_numbers(spec: dict) -> list[str]:
+    """Replace hand-typed values that EXACTLY equal a calculator output ("5 V" when V_drive is "5 V") with that
+    output's placeholder. Changes `spec` in place and returns what was replaced. Anything else stays an error."""
+    values: dict[str, str] = {}
+    for c in spec.get("calculations", []) if isinstance(spec, dict) else []:
+        try:
+            res = run_calc(c["tool"], c["args"])
+        except Exception:  # noqa: BLE001 - validate() reports bad calculations
+            continue
+        for k, v in res.items():
+            if isinstance(v, str) and k != "assumptions" and re.search(r"\d", v):
+                values.setdefault(v, f"{{{c['id']}.{k}}}")
+    fixes: list[str] = []
+
+    def fix(text):
+        if not isinstance(text, str):
+            return text
+        for v, tag in sorted(values.items(), key=lambda kv: -len(kv[0])):  # longest first: "4.50 V" before "5 V"
+            pat = re.compile(rf"(?<![\w.,{{]){re.escape(v)}(?![\w}}])")
+            if pat.search(PLACEHOLDER.sub("", text)):
+                new = pat.sub(tag, text)
+                if new != text:
+                    fixes.append(f"{text!r} -> {new!r}")
+                    text = new
+        return text
+
+    spec["title"] = fix(spec.get("title"))
+    for kind, key in (("parts", "label"), ("flows", "label"), ("labels", "text"), ("steps", "caption")):
+        for item in spec.get(kind, []) if isinstance(spec.get(kind), list) else []:
+            if isinstance(item, dict) and key in item:
+                item[key] = fix(item[key])
+    if isinstance(spec.get("key_points"), list):
+        spec["key_points"] = [fix(k) for k in spec["key_points"]]
+    return fixes
+
+
 def validate(spec) -> tuple[list[str], list[str]]:
     """(errors, warnings). Errors block the build; warnings are reported."""
     errs = [f"{'/'.join(map(str, e.absolute_path)) or '(root)'}: {e.message}"
@@ -137,7 +190,9 @@ def validate(spec) -> tuple[list[str], list[str]]:
             errs.append(f"{where}: placeholder values already include their unit; remove the unit after it in {text!r}")
         bare = [n for n in BARE_NUMBER.findall(PLACEHOLDER.sub("", text)) if n != "0"]  # "0 V rail", "~0 A" are fine
         if bare:
-            errs.append(f"{where}: numbers must come from calculator placeholders, found {bare} in {text!r}")
+            hint = _placeholder_hints(spec, bare)
+            errs.append(f"{where}: numbers must come from calculator placeholders, found {bare} in {text!r}"
+                        + (f" (use {hint})" if hint else ""))
     if not errs:
         errs += lint(spec)
     return errs, warns

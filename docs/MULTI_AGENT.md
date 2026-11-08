@@ -29,7 +29,7 @@ worker {"kind": "lesson"}       appends the VERIFIED lesson.blend as data into y
 ## Run it
 
 ```bash
-# add your key to the repo-root .env (gitignored):  OPENAI_API_KEY=sk-...   (OPENAI_BUILDER_MODEL=gpt-5)
+# add your key to the repo-root .env (gitignored):  OPENAI_API_KEY=sk-...   (OPENAI_BUILDER_MODEL=gpt-5-mini)
 python -m director.lesson --text "Why would someone use a BJT over a MOSFET?"          # build + verify only
 python -m director.lesson --text "How does a voltage divider work?" --send             # + load into Blender
 python -m director.lesson --text "..." --builder deterministic                         # no builder LLM
@@ -67,6 +67,14 @@ still directs, and the vision check still runs.
   - Parts must not overlap, and wires must not pass over other parts.
   - Everything must be inside the frame.
   - Labels must not overlap each other, the parts or the HUD.
+- **Readable from the camera.** No part may hide another one from the camera, and no label may sit inside a
+  part. Errors give coordinates ("w3 through r1: wire at x -0.62, r1 occupies x -0.98..0.98"), so a repair
+  can move things precisely.
+- **Typed values.** If the director types a value that exactly equals a calculator output ("5 V" when
+  `V_drive` is "5 V"), it is replaced by that placeholder and logged. Any other typed number is still an
+  error.
+- **Choosing the scene.** If the builder's repaired scene is structurally correct but still has layout issues,
+  it is kept when it has no more of them than the deterministic layout; otherwise the fallback wins.
 - **Vision.** Nemotron VL looks at the render. A confident mismatch counts as an error (repair); otherwise its
   findings are warnings.
 - **After loading.** Once the verified lesson is in your Blender, the director re-runs the structural checks on
@@ -96,8 +104,10 @@ sandbox: the process boundary and the no-attribute rule are the main protections
   - grouped comparisons become side-by-side columns;
   - it detours wires through lanes when the default route would cross a part.
   Its leftover label/wire overlaps are reported as warnings. A better layout is the builder agent's job.
-- The OpenAI builder path is covered offline by tests with a MOCK builder. It has not run live until a key is
-  added.
+- Builder model: `gpt-5-mini` (default) passes simple lessons (LED, voltage divider, transistor switch) on the
+  first try. On the dense 10-part BJT vs MOSFET comparison it usually still leaves a wire or label conflict,
+  so the verified deterministic layout is used. A stronger model (`OPENAI_BUILDER_MODEL=gpt-5`) is the knob
+  for that. Keep `OPENAI_REASONING_EFFORT` at medium (or unset); `low` hurts the coordinate arithmetic.
 
 ## Files
 

@@ -112,5 +112,5 @@ Exit codes: 0 ok/clarify · 1 model call failed · 2 config · 3 plan invalid af
 `NVIDIA_API_KEY`, `NEMOTRON_MODEL` (default `nvidia/nemotron-3.5-super-vl-120b-a12b`), `NEMOTRON_BASE_URL`
 (default `https://integrate.api.nvidia.com/v1`), `NEMOTRON_THINKING` (0), `NEMOTRON_TIMEOUT` (90), `NEMOTRON_VL_MODEL`,
 `TINYDIRECTOR_ROOT` (worker repo-root override), `TD_SNAPSHOT`, `TD_SHARED_DIR`.
-Lesson builder: `OPENAI_API_KEY` (empty -> deterministic builder, labeled), `OPENAI_BUILDER_MODEL` (gpt-5),
+Lesson builder: `OPENAI_API_KEY` (empty -> deterministic builder, labeled), `OPENAI_BUILDER_MODEL` (gpt-5-mini),
 `OPENAI_BASE_URL`, `OPENAI_TIMEOUT` (180), `OPENAI_REASONING_EFFORT`; `BLENDER` = path to blender if not on PATH.

@@ -7,7 +7,7 @@ builder gets ONE repair turn with the concrete errors and measured geometry.
 
 Config (env or the gitignored .env; the key is never printed):
   OPENAI_API_KEY          required for this builder (otherwise the deterministic builder is used, labeled)
-  OPENAI_BUILDER_MODEL    default gpt-5
+  OPENAI_BUILDER_MODEL    default gpt-5-mini
   OPENAI_BASE_URL         optional (any OpenAI-compatible endpoint)
   OPENAI_TIMEOUT          seconds, default 180
   OPENAI_REASONING_EFFORT optional (low/medium/high), sent only when set
@@ -25,7 +25,7 @@ from blender_engine.lesson_parts import COLORS, LED_COLORS, PARTS
 
 from ..nemotron_client import ConfigError, ModelCallError, ModelReply
 
-DEFAULT_MODEL = "gpt-5"
+DEFAULT_MODEL = "gpt-5-mini"
 TOOLKIT_NAMES = ("scene", "part", "pin", "wire", "flow", "label", "label_at", "key_points", "step", "box",
                  "cylinder", "sphere", "text3d")  # must equal toolkit.API (checked by a test)
 
@@ -53,9 +53,12 @@ class OpenAIBuilderClient:
         try:
             resp = self._client.chat.completions.create(**kwargs)
         except Exception as exc:  # normalize; never include the key
-            status = getattr(exc, "status_code", None)
+            status, code = getattr(exc, "status_code", None), getattr(exc, "code", None)
             hint = {401: "key rejected - check OPENAI_API_KEY", 404: f"model {self.model!r} not found",
-                    429: "rate limited or out of quota"}.get(status, "")
+                    429: "rate limited (too many requests/tokens per minute for this account tier)"}.get(status, "")
+            if code == "insufficient_quota":
+                hint = ("no API credits on this OpenAI account (insufficient_quota): add a payment method / "
+                        "prepaid credits at platform.openai.com -> Settings -> Billing")
             raise ModelCallError(f"{type(exc).__name__}{f' {status}' if status else ''}: {hint or exc}") from None
         choice = resp.choices[0]
         usage = resp.usage.model_dump() if getattr(resp, "usage", None) else {}
@@ -100,7 +103,9 @@ from the front (-Y) and above, slightly from the right):
       # its label is shown as "<id>_label" near the middle of the path.
   label(id, text, near=None, x=None, y=None, z=None, size=0.16, color="white")
       # a camera-facing text plate near a part/wire id, or at x, y, z (absolute).
-  label_at(id, x=None, y=None, z=None)           # move any label, including "<part>_label" / "<flow>_label"
+  label_at(id, x=None, y=None, z=None)           # move a label: a spec label by ITS id ("l1"), or the automatic
+                                                 # "<part id>_label" / "<flow id>_label" (only parts and flows
+                                                 # get automatic labels; there is no "l1_label")
   key_points([str, ...])                         # 1-4 bullet points shown in the top-right panel
   step([ids], caption)                           # reveal order: one call per spec step, in order
   box(id, sx, sy, sz, x, y, z, part=None, color="gray", emit=0.0)        # primitives for custom parts or
@@ -126,11 +131,19 @@ LAYOUT RULES (this is where you add value):
   sub-circuits (spec "group") into their own regions; shared parts (supply, ground, signal) where every group
   can reach them with short wires.
 - Leave at least 0.8 m between part footprints. Keep everything within about x in [-7, 7], y in [-3.5, 4].
-- No wire may pass over another part's footprint: add via=[...] waypoints to go around. Wires to the same
-  pin from different directions are fine. Avoid long wires crossing each other where possible.
+- No wire may pass under/over another part's footprint. A part placed at (x, y) with footprint W x D occupies
+  x - W/2 .. x + W/2 and y - D/2 .. y + D/2 (a resistor at x=0 spans x -1.0..1.0). Every straight segment
+  pin -> via -> ... -> pin must stay at least 0.3 m outside every OTHER part's footprint, so put waypoints in
+  the free lanes between rows/columns or outside the whole layout. Check this with arithmetic before you write
+  the call. Wires to the same pin from different directions are fine; avoid long wires crossing each other.
 - Put tall parts (battery, LEDs, MOSFET) further back (+Y) than short ones when they would hide them.
-- Labels must not overlap each other or cover other parts. Every part label sits above its part; move
-  crowded ones with label_at(...) (raise z, or shift x/y). Put spec labels where they explain something.
+- Labels must not overlap each other or cover other parts. Every part label already sits above its part;
+  only move crowded ones with label_at(...). A label must never be inside a part: above a part, z must be at
+  least the part height + 0.3 (resistor 1.0, battery 2.1, LED 2.2); otherwise move it beside the part, on the
+  free board (z about 0.3). Put spec labels where they explain something.
+- Overlap is judged ON SCREEN. The camera looks from the front (-Y) and above, so a label raised high near the
+  front lands on top of labels and parts further back. Keep labels low (about 0.3-1.0 above their part) and
+  separate neighbours sideways in X rather than stacking them in Z.
 - rotate parts (multiples of 90) when it makes the wiring shorter or cleaner.
 
 Reply with ONE ```python code block and nothing else."""

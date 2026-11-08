@@ -418,3 +418,47 @@ def test_lint_question_components_must_be_shown():
     assert validate(s)[0] == []
     s["question"] = "Why use a capacitor here?"
     assert any("no capacitor part" in e for e in validate(s)[0])
+
+
+def test_verify_catches_label_buried_in_part():
+    def m(rb):
+        rb["labels"]["r1_label"]["loc"] = [3.0, 0.0, 0.36]  # inside r1 (bbox x 2.6..3.4, top z 1)
+    errs = _verify_with(m)
+    assert any("r1_label is inside r1" in e for e in errs)
+    assert not any("inside" in e for e in _verify_with(lambda rb: rb["labels"]["r1_label"].update(loc=[3.0, 0.0, 1.4])))
+
+
+def test_pipeline_keeps_structurally_verified_builder_scene_over_equal_fallback(tmp_path):
+    draft = fallback.code_for(resolve(LED_SPEC)[0])
+    mb = MockBuilder(replies=[f"```python\n{draft}```", f"```python\n# repaired\n{draft}```"])
+    runner = FakeRunner(resolved_layout_bad=True)  # every build overlaps, the fallback's too
+    lesson = pipeline.build_lesson("Why does an LED need a resistor?", MockDirector(), mb, None,
+                                   cache_dir=tmp_path, runner=runner, log=lambda *a: None)
+    assert lesson.ok and lesson.builder.startswith("MOCK builder") and "layout warnings" in lesson.builder
+    assert runner.calls == ["code_agent1.py", "code_agent2.py", "code_fallback.py"]
+
+
+def test_verify_catches_hidden_part():
+    def m(rb):
+        rb["parts"]["led1"]["screen"] = list(rb["parts"]["r1"]["screen"])
+        rb["parts"]["r1"]["bbox"] = [[3.6, -1.0, 0], [4.4, -0.4, 1]]  # r1 moved in front, same screen spot
+    assert any("r1 hides led1" in e for e in _verify_with(m))
+
+
+def test_bare_number_error_suggests_placeholder():
+    s = copy.deepcopy(BJT_MOSFET_SPEC)
+    s["parts"][1]["label"] = "5 V logic pin"
+    errs = validate(s)[0]
+    assert any("{sw.V_drive}" in e for e in errs)
+
+
+def test_autofix_exact_calculator_values_only():
+    from director.lesson.spec import autofix_numbers
+    s = copy.deepcopy(BJT_MOSFET_SPEC)
+    s["parts"][1]["label"] = "5 V logic pin"
+    s["labels"][0]["text"] = "needs 4.50 V and 7 V"  # not calculator values: must stay and fail
+    fixes = autofix_numbers(s)
+    assert s["parts"][1]["label"] == "{sw.V_drive} logic pin" and len(fixes) == 1
+    assert any("numbers must come from" in e for e in validate(s)[0])
+    s["labels"][0]["text"] = "current-driven"
+    assert validate(s)[0] == []

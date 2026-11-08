@@ -124,7 +124,9 @@ def write_spec(question: str, client, max_tokens: int = 6000) -> SpecResult:
                 return SpecResult(None, unsupported=data["unsupported"][:300], replies=replies)
             data.setdefault("schema_version", 1)
             data["question"] = question
+            fixed = spec_mod.autofix_numbers(data) if isinstance(data.get("calculations"), list) else []
             errors, warns = check(data)
+            warns = [f"typed value replaced by its calculator placeholder: {f}" for f in fixed] + warns
             if not errors:
                 return SpecResult(data, warnings=warns, replies=replies)
         if attempt == 1:  # ONE corrective retry with the exact problems

@@ -854,7 +854,8 @@ def readback() -> dict:
                                  "markers": int(ins["Count"][0].value),
                                  "length_m": round(sum((b - a).length for a, b in zip(_pts(o), _pts(o)[1:])), 3)}
         elif kind == "label":
-            out["labels"][lid] = {"text": o.data.body, "near": o.get("lesson_near"), "screen": _screen_rect(o, cam)}
+            out["labels"][lid] = {"text": o.data.body, "near": o.get("lesson_near"), "screen": _screen_rect(o, cam),
+                                  "loc": [round(c, 3) for c in o.matrix_world.translation]}
         elif kind == "hud":
             out["hud"][lid] = o.data.body
             out.setdefault("hud_screen", {})[lid] = _screen_rect(o, cam)

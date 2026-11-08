@@ -155,6 +155,16 @@ def layout(spec: dict, rb: dict, rep: Report) -> None:
             if alo[0] < bhi[0] - 0.03 and blo[0] < ahi[0] - 0.03 and alo[1] < bhi[1] - 0.03 and blo[1] < ahi[1] - 0.03:
                 overlaps.append(f"{a}/{b}")
     (E if overlaps else P)(f"parts overlap: {overlaps}" if overlaps else "no overlapping parts")
+    hidden = []  # the camera looks from -Y: a part nearer the camera (smaller y) can hide one behind it
+    for i, a in enumerate(ids):
+        for b in ids[i + 1:]:
+            ya = (parts[a]["bbox"][0][1] + parts[a]["bbox"][1][1]) / 2
+            yb = (parts[b]["bbox"][0][1] + parts[b]["bbox"][1][1]) / 2
+            near, far = (a, b) if ya < yb else (b, a)
+            rf = parts[far]["screen"]
+            if _area(rf) > 0 and _inter(parts[near]["screen"], rf) > 0.4 * _area(rf):
+                hidden.append(f"{near} hides {far} from the camera (move {far} sideways in X, or put it in front)")
+    (E if hidden else P)(f"parts hidden: {hidden}" if hidden else "no part hides another")
     through = []
     for wid, w in rb["wires"].items():
         own = {w["from"].split(".")[0], w["to"].split(".")[0]}
@@ -162,29 +172,47 @@ def layout(spec: dict, rb: dict, rep: Report) -> None:
             if pid in own or p["type"] == "ground":
                 continue
             lo, hi = p["bbox"]
-            for pt in w["points"][2:-2]:
-                if lo[0] + 0.05 < pt[0] < hi[0] - 0.05 and lo[1] + 0.05 < pt[1] < hi[1] - 0.05 and pt[2] < hi[2]:
-                    through.append(f"{wid} through {pid}")
-                    break
+            hits = [pt for pt in w["points"][2:-2]
+                    if lo[0] + 0.05 < pt[0] < hi[0] - 0.05 and lo[1] + 0.05 < pt[1] < hi[1] - 0.05 and pt[2] < hi[2]]
+            if hits:  # say WHERE, so a repair can move the route instead of guessing
+                xs, ys = [h[0] for h in hits], [h[1] for h in hits]
+                through.append(f"{wid} through {pid} (wire at x {min(xs):.2f}..{max(xs):.2f}, y {min(ys):.2f}.."
+                               f"{max(ys):.2f}; {pid} occupies x {lo[0]:.2f}..{hi[0]:.2f}, y {lo[1]:.2f}..{hi[1]:.2f})")
     (E if through else P)(f"wires pass through parts: {through} (route with via=[...])" if through
                           else "no wire passes through a part")
+    buried = []
+    for lid, lab in rb["labels"].items():
+        loc = lab.get("loc")
+        if not loc:
+            continue
+        for pid, p in parts.items():
+            lo, hi = p["bbox"]
+            if lo[0] < loc[0] < hi[0] and lo[1] < loc[1] < hi[1] and loc[2] < hi[2] + 0.1:
+                buried.append(f"{lid} is inside {pid} (label z {loc[2]:.2f}, {pid} top z {hi[2]:.2f}: "
+                              f"use z >= {hi[2] + 0.3:.2f} or move it beside the part)")
+                break
+    (E if buried else P)(f"labels inside parts: {buried}" if buried else "no label is buried in a part")
     out = [k for k, v in list(parts.items()) + list(rb["labels"].items())
            if v["screen"][0] < 0.0 or v["screen"][1] < 0.0 or v["screen"][2] > 1.0 or v["screen"][3] > 1.0]
     (E if out else P)(f"outside the camera frame: {out}" if out else "everything inside the frame")
     labs = rb["labels"]
     lids = sorted(labs)
     clash = []
+
+    def at(lid):  # where a label is, so a repair can move it precisely
+        loc = labs[lid].get("loc")
+        return f"{lid} at ({loc[0]:.2f}, {loc[1]:.2f}, {loc[2]:.2f})" if loc else lid
     for i, a in enumerate(lids):
         ra = labs[a]["screen"]
         for b in lids[i + 1:]:
             rb_ = labs[b]["screen"]
             if _inter(ra, rb_) > 0.15 * min(_area(ra), _area(rb_)):
-                clash.append(f"{a}/{b}")
+                clash.append(f"{at(a)} / {at(b)}")
         for pid, p in parts.items():
             if pid == labs[a].get("near"):
                 continue
             if _inter(ra, p["screen"]) > 0.35 * _area(ra):
-                clash.append(f"{a} covers {pid}")
+                clash.append(f"{at(a)} covers {pid}")
         for hid, hr in rb.get("hud_screen", {}).items():
             if rb.get("hud", {}).get(hid, "").strip() and _inter(ra, hr) > 0.1 * _area(ra):
                 clash.append(f"{a} under HUD {hid}")

@@ -165,6 +165,9 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
     _save(out / "resolved_spec.json", {"spec": lesson.resolved, "results": lesson.results})
     log(f"[lesson] spec ok in {time.time() - t0:.1f}s: {lesson.resolved['title']!r}, "
         f"{len(sr.spec['parts'])} parts, {len(sr.spec['connections'])} wires, {len(sr.spec['flows'])} flows")
+    for w in sr.warnings:
+        log(f"           spec note: {w}")
+    lesson.notes += [w for w in sr.warnings if w.startswith("typed value")]
     draft = fallback.code_for(lesson.resolved)
     _save(out / "code_fallback.py", draft)
 
@@ -202,6 +205,7 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
         return lesson
 
     # 2. builder agent: write -> run -> verify -> one repair
+    candidate = None  # builder scene that is structurally verified but still has layout issues
     if builder_client is not None:
         bname = f"openai:{builder_client.model}" if getattr(builder_client, "live", True) else "MOCK builder"
         log(f"[lesson] builder {bname}: writing scene code ...")
@@ -213,10 +217,16 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
                 return accept("agent1", bname, rep)
             log("[lesson] builder repair (1 of 1) ...")
             code2, errs2, _ = builder_mod.ask(builder_client, builder_mod.repair_messages(msgs, code, rep.errors, rb))
-            rep2, _ = attempt(bname, code2, "agent2", True) if code2 else (verify_mod.Report(errors=errs2), {})
+            rep2, rb2 = attempt(bname, code2, "agent2", True) if code2 else (verify_mod.Report(errors=errs2), {})
             if rep2.ok:
                 return accept("agent2", bname, rep2)
-            lesson.notes.append("builder agent failed verification twice; deterministic fallback used")
+            if rb2.get("ok"):  # structurally right, only layout left? it may still beat the plain fallback
+                img = out / "build_agent2" / "preview.png"
+                lenient = verify_mod.verify(lesson.resolved, lesson.results, rb2, image=img if img.exists() else None,
+                                            vision_client=vision_client, strict_layout=False)
+                if lenient.ok:
+                    candidate = lenient
+            lesson.notes.append("builder agent did not pass the strict layout checks twice")
         except Exception as exc:  # noqa: BLE001 - any builder failure falls back, reported
             lesson.notes.append(f"builder agent unavailable: {type(exc).__name__}: {exc}"[:300])
             log(f"[lesson] builder failed: {type(exc).__name__}: {exc}"[:300])
@@ -225,7 +235,12 @@ def build_lesson(question: str, director_client, builder_client=None, vision_cli
 
     # 3. deterministic fallback: same sandbox + structural checks; layout issues are warnings
     rep, _ = attempt("deterministic", draft, "fallback", False)
+    if candidate is not None and (not rep.ok or len(candidate.warnings) <= len(rep.warnings)):
+        lesson.notes.append(f"kept the builder's repaired scene: structurally verified, {len(candidate.warnings)} "
+                            f"layout warning(s) vs {len(rep.warnings)} for the deterministic layout")
+        return accept("agent2", f"{bname} (with layout warnings)", candidate)
     if rep.ok:
+        lesson.notes.append("deterministic fallback used")
         return accept("fallback", "deterministic", rep)
     lesson.report = rep
     _save(out / "lesson.json", {"ok": False, "question": question, "spec": lesson.spec, "report": _report_dict(rep),
