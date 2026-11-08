@@ -1,0 +1,2206 @@
+[
+ {
+  "step": 1,
+  "text": "Teach me why LEDs need resistors.",
+  "tool": "teach_led_resistor",
+  "args": {},
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Teach me why LEDs need resistors."
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: No lesson circuit in the scene yet."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "2 concept(s), 6 fact(s)",
+    "detail": "Current limiting, LED"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: teach_led_resistor",
+    "detail": "The user wants to start the lesson on why LEDs need resistors, and no circuit exists yet."
+   },
+   {
+    "stage": "calculate",
+    "status": "start",
+    "title": "Calculating",
+    "detail": "director/circuit/model.py: I = (V_source - V_LED) / R"
+   },
+   {
+    "stage": "calculate",
+    "status": "ok",
+    "title": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "detail": ""
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Building the circuit in Blender",
+    "detail": "circuit_request_v1 build"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: build ok",
+    "detail": "scene v1"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 10/10 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "numbers are checked against the calculation"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "reply": "The LED only drops about 2 volts, so without a resistor nothing limits the current and it would burn out. With the 330 ohm resistor, the current is about 21 milliamps and the LED is bright. This is a simplified model where the LED is treated as a fixed 2 volt drop.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "The LED only drops about 2 volts,",
+    "focus": "overview",
+    "caption": "The LED only drops about 2 volts,"
+   },
+   {
+    "text": "so without a resistor nothing limits the current and it would burn out.",
+    "focus": "resistor",
+    "caption": "so without a resistor nothing limits the current and it would burn\nout."
+   },
+   {
+    "text": "With the 330 ohm resistor,",
+    "focus": "resistor",
+    "caption": "With the 330 ohm resistor,"
+   },
+   {
+    "text": "the current is about 21 milliamps and the LED is bright.",
+    "focus": "current",
+    "caption": "the current is about 21 milliamps and the LED is bright."
+   },
+   {
+    "text": "This is a simplified model where the LED is treated as a fixed 2 volt drop.",
+    "focus": "led",
+    "caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop."
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "overview",
+    "got": "overview",
+    "code": 200,
+    "callout_sent": null,
+    "callout_read_back": null,
+    "halo": null,
+    "flow_emphasis": false
+   },
+   {
+    "want": "resistor",
+    "got": "resistor",
+    "code": 200,
+    "callout_sent": null,
+    "callout_read_back": null,
+    "halo": "resistor",
+    "flow_emphasis": false
+   },
+   {
+    "want": "current",
+    "got": "current",
+    "code": 200,
+    "callout_sent": null,
+    "callout_read_back": null,
+    "halo": null,
+    "flow_emphasis": true
+   },
+   {
+    "want": "led",
+    "got": "led",
+    "code": 200,
+    "callout_sent": null,
+    "callout_read_back": null,
+    "halo": "led",
+    "flow_emphasis": false
+   }
+  ],
+  "seconds": 11.8,
+  "compare": {},
+  "direction": {
+   "focus": "led",
+   "camera": [
+    4.015,
+    -8.618,
+    5.964
+   ],
+   "moving": false,
+   "halo": "led",
+   "caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop.",
+   "targets": [
+    "overview",
+    "battery",
+    "resistor",
+    "led",
+    "current"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  },
+  "scene_version": [
+   0,
+   1
+  ],
+  "circuit": {
+   "present": true,
+   "frames": {
+    "start": 1,
+    "end": 288,
+    "power_on": [
+     80,
+     92
+    ],
+    "show": 200
+   },
+   "objects": [
+    {
+     "id": "battery_1",
+     "uid": "0d96e11f",
+     "type": "MESH",
+     "position": [
+      -2.75,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "board_1",
+     "uid": "dd1edc33",
+     "type": "MESH",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "flow_1",
+     "uid": "72d23323",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_battery",
+     "uid": "319d8983",
+     "type": "FONT",
+     "position": [
+      -2.75,
+      -0.1,
+      2.45
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_caption",
+     "uid": "09ed573b",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      -0.56,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_current",
+     "uid": "2a4bca61",
+     "type": "FONT",
+     "position": [
+      0.1,
+      -1.55,
+      0.82
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_equation",
+     "uid": "a92e7ff2",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.645,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_led",
+     "uid": "74e722e3",
+     "type": "FONT",
+     "position": [
+      2.75,
+      0.0,
+      2.25
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_legend",
+     "uid": "c1c11573",
+     "type": "FONT",
+     "position": [
+      1.4,
+      -0.76,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_resistor",
+     "uid": "b80515c9",
+     "type": "FONT",
+     "position": [
+      0.0,
+      1.3,
+      1.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_status",
+     "uid": "7fda1367",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.55,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_title",
+     "uid": "45f6e9b8",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.78,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "led_1",
+     "uid": "a5ec15d3",
+     "type": "MESH",
+     "position": [
+      2.7,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "resistor_1",
+     "uid": "5ae87ba9",
+     "type": "MESH",
+     "position": [
+      0.0,
+      1.3,
+      0.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_1",
+     "uid": "1d0094d7",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_2",
+     "uid": "9694ec5e",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_3",
+     "uid": "f70b079d",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    }
+   ],
+   "params": {
+    "source_v": 9.0,
+    "resistance_ohm": 330.0,
+    "led_vf": 2.0
+   },
+   "labels": {
+    "label_title": "Why does an LED need a resistor?",
+    "label_battery": "9 V battery",
+    "label_resistor": "Resistor  R = 330 Ω\nvoltage across it: 7.0 V",
+    "label_led": "Red LED\nforward voltage ≈ 2.0 V",
+    "label_current": "I = 21.2 mA",
+    "label_equation": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "label_status": "just above a typical 20 mA rating (limit ~30 mA)",
+    "label_caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop.",
+    "label_legend": "Glowing arrows: conventional current (+ to −), speed proportional to current"
+   },
+   "flow": {
+    "lap_frames": 90.51,
+    "markers": 30,
+    "power_at_show": 1.0,
+    "power_at_start": 0.0
+   },
+   "led": {
+    "emission_at_show": 6.364,
+    "light_w_at_show": 84.85,
+    "status": "high",
+    "status_color": "#FFC04D"
+   },
+   "resistor_bands": [
+    "#E8731A",
+    "#E8731A",
+    "#6B3A1E",
+    "#C9A23A"
+   ]
+  }
+ },
+ {
+  "step": 2,
+  "text": "Poyo, show me what's happening inside this circuit.",
+  "tool": "tour_circuit",
+  "args": {
+   "stops": [
+    "battery",
+    "resistor",
+    "current",
+    "led",
+    "overview"
+   ]
+  },
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Poyo, show me what's happening inside this circuit."
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: Circuit in the scene (read back from Blender): battery 9 V, resistor 330 Ω, red LED (forward voltage 2 V). The camera is focused on the led."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "2 concept(s), 6 fact(s)",
+    "detail": "Current limiting, LED (carried over from the last turn)"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: tour_circuit",
+    "detail": "The user asked for a guided tour of what is happening inside the circuit on screen."
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Tour: battery → resistor → current → led → overview",
+    "detail": "every stop is a part Blender reports on stage"
+   },
+   {
+    "stage": "calculate",
+    "status": "ok",
+    "title": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "detail": "battery: 9 V · resistor: 7.0 V · current: 21.2 mA · led: ≈ 2 V · overview: I = 21.2 mA"
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "one sentence per tour stop, numbers checked"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "reply": "The battery supplies 9 V to push current around the loop. The 330 Ω resistor takes 7.0 V to set the current. The same 21.2 mA flows all the way around the loop. The LED keeps about 2 V and glows with that current. All together: I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "The battery supplies 9 V to push current around the loop.",
+    "focus": "battery",
+    "caption": "The battery supplies 9 V to push current around the loop.",
+    "callout": {
+     "value": "9 V",
+     "note": "the battery pushes the current around"
+    }
+   },
+   {
+    "text": "The 330 Ω resistor takes 7.0 V to set the current.",
+    "focus": "resistor",
+    "caption": "The 330 Ω resistor takes 7.0 V to set the current.",
+    "callout": {
+     "value": "7.0 V",
+     "note": "across the 330 Ω resistor"
+    }
+   },
+   {
+    "text": "The same 21.2 mA flows all the way around the loop.",
+    "focus": "current",
+    "caption": "The same 21.2 mA flows all the way around the loop.",
+    "callout": {
+     "value": "21.2 mA",
+     "note": "the same current all the way around the loop"
+    }
+   },
+   {
+    "text": "The LED keeps about 2 V and glows with that current.",
+    "focus": "led",
+    "caption": "The LED keeps about 2 V and glows with that current.",
+    "callout": {
+     "value": "≈ 2 V",
+     "note": "LED forward voltage (simplified model)"
+    }
+   },
+   {
+    "text": "All together: I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA.",
+    "focus": "overview",
+    "caption": "All together: I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA.",
+    "callout": {
+     "value": "I = 21.2 mA",
+     "note": "(9 V − 2 V) ÷ 330 Ω"
+    }
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "battery",
+    "got": "battery",
+    "code": 200,
+    "callout_sent": {
+     "value": "9 V",
+     "note": "the battery pushes the current around"
+    },
+    "callout_read_back": {
+     "value": "9 V",
+     "note": "the battery pushes the current around"
+    },
+    "halo": "battery",
+    "flow_emphasis": false
+   },
+   {
+    "want": "resistor",
+    "got": "resistor",
+    "code": 200,
+    "callout_sent": {
+     "value": "7.0 V",
+     "note": "across the 330 Ω resistor"
+    },
+    "callout_read_back": {
+     "value": "7.0 V",
+     "note": "across the 330 Ω resistor"
+    },
+    "halo": "resistor",
+    "flow_emphasis": false
+   },
+   {
+    "want": "current",
+    "got": "current",
+    "code": 200,
+    "callout_sent": {
+     "value": "21.2 mA",
+     "note": "the same current all the way around the loop"
+    },
+    "callout_read_back": {
+     "value": "21.2 mA",
+     "note": "the same current all the way around the loop"
+    },
+    "halo": null,
+    "flow_emphasis": true
+   },
+   {
+    "want": "led",
+    "got": "led",
+    "code": 200,
+    "callout_sent": {
+     "value": "≈ 2 V",
+     "note": "LED forward voltage (simplified model)"
+    },
+    "callout_read_back": {
+     "value": "≈ 2 V",
+     "note": "LED forward voltage (simplified model)"
+    },
+    "halo": "led",
+    "flow_emphasis": false
+   },
+   {
+    "want": "overview",
+    "got": "overview",
+    "code": 200,
+    "callout_sent": {
+     "value": "I = 21.2 mA",
+     "note": "(9 V − 2 V) ÷ 330 Ω"
+    },
+    "callout_read_back": {
+     "value": "I = 21.2 mA",
+     "note": "(9 V − 2 V) ÷ 330 Ω"
+    },
+    "halo": null,
+    "flow_emphasis": false
+   }
+  ],
+  "seconds": 11.1,
+  "compare": {},
+  "direction": {
+   "focus": "overview",
+   "camera": [
+    1.7,
+    -10.2,
+    6.9
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "All together: I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA.",
+   "targets": [
+    "overview",
+    "battery",
+    "resistor",
+    "led",
+    "current"
+   ],
+   "callout": {
+    "value": "I = 21.2 mA",
+    "note": "(9 V − 2 V) ÷ 330 Ω"
+   },
+   "flow_emphasis": false
+  },
+  "scene_version": [
+   1,
+   1
+  ],
+  "circuit": {
+   "present": true,
+   "frames": {
+    "start": 1,
+    "end": 288,
+    "power_on": [
+     80,
+     92
+    ],
+    "show": 200
+   },
+   "objects": [
+    {
+     "id": "battery_1",
+     "uid": "0d96e11f",
+     "type": "MESH",
+     "position": [
+      -2.75,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "board_1",
+     "uid": "dd1edc33",
+     "type": "MESH",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "flow_1",
+     "uid": "72d23323",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_battery",
+     "uid": "319d8983",
+     "type": "FONT",
+     "position": [
+      -2.75,
+      -0.1,
+      2.45
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_caption",
+     "uid": "09ed573b",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      -0.56,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_current",
+     "uid": "2a4bca61",
+     "type": "FONT",
+     "position": [
+      0.1,
+      -1.55,
+      0.82
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_equation",
+     "uid": "a92e7ff2",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.645,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_led",
+     "uid": "74e722e3",
+     "type": "FONT",
+     "position": [
+      2.75,
+      0.0,
+      2.25
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_legend",
+     "uid": "c1c11573",
+     "type": "FONT",
+     "position": [
+      1.4,
+      -0.76,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_resistor",
+     "uid": "b80515c9",
+     "type": "FONT",
+     "position": [
+      0.0,
+      1.3,
+      1.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_status",
+     "uid": "7fda1367",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.55,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_title",
+     "uid": "45f6e9b8",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.78,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "led_1",
+     "uid": "a5ec15d3",
+     "type": "MESH",
+     "position": [
+      2.7,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "resistor_1",
+     "uid": "5ae87ba9",
+     "type": "MESH",
+     "position": [
+      0.0,
+      1.3,
+      0.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_1",
+     "uid": "1d0094d7",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_2",
+     "uid": "9694ec5e",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_3",
+     "uid": "f70b079d",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    }
+   ],
+   "params": {
+    "source_v": 9.0,
+    "resistance_ohm": 330.0,
+    "led_vf": 2.0
+   },
+   "labels": {
+    "label_title": "Why does an LED need a resistor?",
+    "label_battery": "9 V battery",
+    "label_resistor": "Resistor  R = 330 Ω\nvoltage across it: 7.0 V",
+    "label_led": "Red LED\nforward voltage ≈ 2.0 V",
+    "label_current": "I = 21.2 mA",
+    "label_equation": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "label_status": "just above a typical 20 mA rating (limit ~30 mA)",
+    "label_caption": "All together: I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA.",
+    "label_legend": "Glowing arrows: conventional current (+ to −), speed proportional to current"
+   },
+   "flow": {
+    "lap_frames": 90.51,
+    "markers": 30,
+    "power_at_show": 1.0,
+    "power_at_start": 0.0
+   },
+   "led": {
+    "emission_at_show": 6.364,
+    "light_w_at_show": 84.85,
+    "status": "high",
+    "status_color": "#FFC04D"
+   },
+   "resistor_bands": [
+    "#E8731A",
+    "#E8731A",
+    "#6B3A1E",
+    "#C9A23A"
+   ]
+  }
+ },
+ {
+  "step": 3,
+  "text": "Compare what happens if I increase the resistor to 1,000 ohms.",
+  "tool": "compare_resistance",
+  "args": {
+   "resistance_ohm": 1000
+  },
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Compare what happens if I increase the resistor to 1,000 ohms."
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: Circuit in the scene (read back from Blender): battery 9 V, resistor 330 Ω, red LED (forward voltage 2 V)."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "1 concept(s), 2 fact(s)",
+    "detail": "Resistance"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: compare_resistance",
+    "detail": "The user asked to compare the current circuit with a 1,000 ohm resistor side by side."
+   },
+   {
+    "stage": "calculate",
+    "status": "start",
+    "title": "Calculating both",
+    "detail": "director/circuit/model.py: I = (V_source - V_LED) / R, twice"
+   },
+   {
+    "stage": "calculate",
+    "status": "ok",
+    "title": "Now 21.2 mA · What if 7.0 mA",
+    "detail": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA  |  I = (9 V − 2 V) ÷ 1,000 Ω = 7.0 mA"
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Building the what-if copy beside the circuit",
+    "detail": "compare_request_v1 show: 330 Ω vs 1,000 Ω"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: comparison ok",
+    "detail": "32 what-if objects"
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 13/13 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "both calculations, numbers checked"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "reply": "The left circuit uses 330 ohms and gives about 21 milliamps. The what-if copy on the right uses 1,000 ohms and gives about 7 milliamps, so its LED glows dimmer and its arrows move slower. More resistance means less current, and the glow and arrow speed are just illustrative in this simplified model.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "The left circuit uses 330 ohms and gives about 21 milliamps.",
+    "focus": "baseline",
+    "caption": "The left circuit uses 330 ohms and gives about 21 milliamps.",
+    "callout": {
+     "value": "21.2 mA",
+     "note": "now · 330 Ω"
+    }
+   },
+   {
+    "text": "The what-if copy on the right uses 1,000 ohms and gives about 7 milliamps,",
+    "focus": "alternative",
+    "caption": "The what-if copy on the right uses 1,000 ohms and gives about 7\nmilliamps,",
+    "callout": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    }
+   },
+   {
+    "text": "so its LED glows dimmer and its arrows move slower.",
+    "focus": "alternative",
+    "caption": "so its LED glows dimmer and its arrows move slower.",
+    "callout": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    }
+   },
+   {
+    "text": "More resistance means less current, and the glow and arrow speed are just illustrative in this simplified model.",
+    "focus": "compare",
+    "caption": "More resistance means less current, and the glow and arrow speed are\njust illustrative in this simplified model.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "baseline",
+    "got": "baseline",
+    "code": 200,
+    "callout_sent": {
+     "value": "21.2 mA",
+     "note": "now · 330 Ω"
+    },
+    "callout_read_back": {
+     "value": "21.2 mA",
+     "note": "now · 330 Ω"
+    },
+    "halo": null,
+    "flow_emphasis": false
+   },
+   {
+    "want": "alternative",
+    "got": "alternative",
+    "code": 200,
+    "callout_sent": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    },
+    "callout_read_back": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    },
+    "halo": null,
+    "flow_emphasis": false
+   },
+   {
+    "want": "compare",
+    "got": "compare",
+    "code": 200,
+    "callout_sent": null,
+    "callout_read_back": null,
+    "halo": null,
+    "flow_emphasis": false
+   }
+  ],
+  "seconds": 11.4,
+  "compare": {
+   "active": true,
+   "objects": 32,
+   "frame_start": 100,
+   "alternative": {
+    "params": {
+     "source_v": 9.0,
+     "resistance_ohm": 1000.0,
+     "led_vf": 2.0
+    },
+    "labels": {
+     "label_battery": "9 V battery",
+     "label_resistor": "Resistor  R = 1,000 Ω\nvoltage across it: 7.0 V",
+     "label_led": "Red LED\nforward voltage ≈ 2.0 V",
+     "label_current": "I = 7.0 mA"
+    },
+    "flow": {
+     "lap_frames": 274.29,
+     "markers": 30,
+     "power": 1.0
+    },
+    "led": {
+     "emission": 2.1,
+     "light_w": 28.0,
+     "status": "ok"
+    },
+    "resistor_bands": [
+     "#6B3A1E",
+     "#141414",
+     "#C8231E",
+     "#C9A23A"
+    ],
+    "position_offset": [
+     8.6,
+     0.0,
+     0.0
+    ]
+   },
+   "headlines": {
+    "alternative": "WHAT IF  ·  R = 1,000 Ω\nI = (9 V − 2 V) ÷ 1,000 Ω = 7.0 mA",
+    "baseline": "NOW  ·  R = 330 Ω\nI = (9 V − 2 V) ÷ 330 Ω = 21.2 mA"
+   },
+   "title": "What if the resistor were 1,000 Ω?",
+   "legend": "Left: the circuit now · right: the what-if. Arrow speed and LED glow are illustrative,\nscaled with the calculated current (not electron speed or measured brightness)."
+  },
+  "direction": {
+   "focus": "compare",
+   "camera": [
+    7.032,
+    -17.913,
+    11.766
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "More resistance means less current, and the glow and arrow speed are\njust illustrative in this simplified model.",
+   "targets": [
+    "overview",
+    "battery",
+    "resistor",
+    "led",
+    "current",
+    "compare",
+    "baseline",
+    "alternative"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  },
+  "scene_version": [
+   1,
+   2
+  ],
+  "circuit": {
+   "present": true,
+   "frames": {
+    "start": 100,
+    "end": 288,
+    "power_on": [
+     80,
+     92
+    ],
+    "show": 200
+   },
+   "objects": [
+    {
+     "id": "battery_1",
+     "uid": "0d96e11f",
+     "type": "MESH",
+     "position": [
+      -2.75,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "board_1",
+     "uid": "dd1edc33",
+     "type": "MESH",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "flow_1",
+     "uid": "72d23323",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_battery",
+     "uid": "319d8983",
+     "type": "FONT",
+     "position": [
+      -2.75,
+      -0.1,
+      2.45
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_caption",
+     "uid": "09ed573b",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      -0.56,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_current",
+     "uid": "2a4bca61",
+     "type": "FONT",
+     "position": [
+      0.1,
+      -1.55,
+      0.82
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_equation",
+     "uid": "a92e7ff2",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.645,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_led",
+     "uid": "74e722e3",
+     "type": "FONT",
+     "position": [
+      2.75,
+      0.0,
+      2.25
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_legend",
+     "uid": "c1c11573",
+     "type": "FONT",
+     "position": [
+      1.4,
+      -0.76,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_resistor",
+     "uid": "b80515c9",
+     "type": "FONT",
+     "position": [
+      0.0,
+      1.3,
+      1.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_status",
+     "uid": "7fda1367",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.55,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_title",
+     "uid": "45f6e9b8",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.78,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "led_1",
+     "uid": "a5ec15d3",
+     "type": "MESH",
+     "position": [
+      2.7,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "resistor_1",
+     "uid": "5ae87ba9",
+     "type": "MESH",
+     "position": [
+      0.0,
+      1.3,
+      0.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_1",
+     "uid": "1d0094d7",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_2",
+     "uid": "9694ec5e",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_3",
+     "uid": "f70b079d",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    }
+   ],
+   "params": {
+    "source_v": 9.0,
+    "resistance_ohm": 330.0,
+    "led_vf": 2.0
+   },
+   "labels": {
+    "label_title": "Why does an LED need a resistor?",
+    "label_battery": "9 V battery",
+    "label_resistor": "Resistor  R = 330 Ω\nvoltage across it: 7.0 V",
+    "label_led": "Red LED\nforward voltage ≈ 2.0 V",
+    "label_current": "I = 21.2 mA",
+    "label_equation": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "label_status": "just above a typical 20 mA rating (limit ~30 mA)",
+    "label_caption": "More resistance means less current, and the glow and arrow speed are\njust illustrative in this simplified model.",
+    "label_legend": "Glowing arrows: conventional current (+ to −), speed proportional to current"
+   },
+   "flow": {
+    "lap_frames": 90.51,
+    "markers": 30,
+    "power_at_show": 1.0,
+    "power_at_start": 0.0
+   },
+   "led": {
+    "emission_at_show": 6.364,
+    "light_w_at_show": 84.85,
+    "status": "high",
+    "status_color": "#FFC04D"
+   },
+   "resistor_bands": [
+    "#E8731A",
+    "#E8731A",
+    "#6B3A1E",
+    "#C9A23A"
+   ]
+  }
+ },
+ {
+  "step": 4,
+  "text": "Why is the LED on the right dimmer?",
+  "tool": "explain",
+  "args": {
+   "question": "Why is the LED on the right dimmer?"
+  },
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Why is the LED on the right dimmer?"
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: Circuit in the scene (read back from Blender): battery 9 V, resistor 330 Ω, red LED (forward voltage 2 V). A side-by-side comparison is on screen: left = this circuit (unchanged), right = a what-if copy with a 1,000 Ω resistor."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "1 concept(s), 3 fact(s)",
+    "detail": "LED"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: explain",
+    "detail": "The user asks about the difference between the two circuits already on screen, so explain without changing anything."
+   },
+   {
+    "stage": "calculate",
+    "status": "start",
+    "title": "Calculating",
+    "detail": "director/circuit/model.py: I = (V_source - V_LED) / R"
+   },
+   {
+    "stage": "calculate",
+    "status": "ok",
+    "title": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "detail": ""
+   },
+   {
+    "stage": "apply",
+    "status": "info",
+    "title": "No scene change",
+    "detail": "explaining the circuit already on screen"
+   },
+   {
+    "stage": "explain",
+    "status": "start",
+    "title": "Writing the explanation",
+    "detail": "numbers are checked against the calculation"
+   },
+   {
+    "stage": "explain",
+    "status": "ok",
+    "title": "Explanation ready (numbers verified)",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "reply": "The LED on the right is dimmer because its resistor is 1,000 ohms instead of 330 ohms. More resistance means less current, about 7 milliamps versus about 21 milliamps, so the LED glows less brightly. This is a simplified model where the LED is treated as a fixed 2 volt drop.",
+  "source": "nemotron",
+  "cues": [
+   {
+    "text": "The LED on the right is dimmer",
+    "focus": "alternative",
+    "caption": "The LED on the right is dimmer",
+    "callout": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    }
+   },
+   {
+    "text": "because its resistor is 1,000 ohms instead of 330 ohms.",
+    "focus": "alternative",
+    "caption": "because its resistor is 1,000 ohms instead of 330 ohms.",
+    "callout": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    }
+   },
+   {
+    "text": "More resistance means less current, about 7 milliamps versus about 21 milliamps,",
+    "focus": "alternative",
+    "caption": "More resistance means less current, about 7 milliamps versus about 21\nmilliamps,",
+    "callout": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    }
+   },
+   {
+    "text": "so the LED glows less brightly.",
+    "focus": "alternative",
+    "caption": "so the LED glows less brightly.",
+    "callout": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    }
+   },
+   {
+    "text": "This is a simplified model where the LED is treated as a fixed 2 volt drop.",
+    "focus": "compare",
+    "caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop.",
+    "callout": null
+   }
+  ],
+  "camera_moves": [
+   {
+    "want": "alternative",
+    "got": "alternative",
+    "code": 200,
+    "callout_sent": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    },
+    "callout_read_back": {
+     "value": "7.0 mA",
+     "note": "what if · 1,000 Ω"
+    },
+    "halo": null,
+    "flow_emphasis": false
+   },
+   {
+    "want": "compare",
+    "got": "compare",
+    "code": 200,
+    "callout_sent": null,
+    "callout_read_back": null,
+    "halo": null,
+    "flow_emphasis": false
+   }
+  ],
+  "seconds": 9.7,
+  "compare": {
+   "active": true,
+   "objects": 32,
+   "frame_start": 100,
+   "alternative": {
+    "params": {
+     "source_v": 9.0,
+     "resistance_ohm": 1000.0,
+     "led_vf": 2.0
+    },
+    "labels": {
+     "label_battery": "9 V battery",
+     "label_resistor": "Resistor  R = 1,000 Ω\nvoltage across it: 7.0 V",
+     "label_led": "Red LED\nforward voltage ≈ 2.0 V",
+     "label_current": "I = 7.0 mA"
+    },
+    "flow": {
+     "lap_frames": 274.29,
+     "markers": 30,
+     "power": 1.0
+    },
+    "led": {
+     "emission": 2.1,
+     "light_w": 28.0,
+     "status": "ok"
+    },
+    "resistor_bands": [
+     "#6B3A1E",
+     "#141414",
+     "#C8231E",
+     "#C9A23A"
+    ],
+    "position_offset": [
+     8.6,
+     0.0,
+     0.0
+    ]
+   },
+   "headlines": {
+    "alternative": "WHAT IF  ·  R = 1,000 Ω\nI = (9 V − 2 V) ÷ 1,000 Ω = 7.0 mA",
+    "baseline": "NOW  ·  R = 330 Ω\nI = (9 V − 2 V) ÷ 330 Ω = 21.2 mA"
+   },
+   "title": "What if the resistor were 1,000 Ω?",
+   "legend": "Left: the circuit now · right: the what-if. Arrow speed and LED glow are illustrative,\nscaled with the calculated current (not electron speed or measured brightness)."
+  },
+  "direction": {
+   "focus": "compare",
+   "camera": [
+    7.032,
+    -17.913,
+    11.766
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop.",
+   "targets": [
+    "overview",
+    "battery",
+    "resistor",
+    "led",
+    "current",
+    "compare",
+    "baseline",
+    "alternative"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  },
+  "scene_version": [
+   2,
+   2
+  ],
+  "circuit": {
+   "present": true,
+   "frames": {
+    "start": 100,
+    "end": 288,
+    "power_on": [
+     80,
+     92
+    ],
+    "show": 200
+   },
+   "objects": [
+    {
+     "id": "battery_1",
+     "uid": "0d96e11f",
+     "type": "MESH",
+     "position": [
+      -2.75,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "board_1",
+     "uid": "dd1edc33",
+     "type": "MESH",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "flow_1",
+     "uid": "72d23323",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_battery",
+     "uid": "319d8983",
+     "type": "FONT",
+     "position": [
+      -2.75,
+      -0.1,
+      2.45
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_caption",
+     "uid": "09ed573b",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      -0.56,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_current",
+     "uid": "2a4bca61",
+     "type": "FONT",
+     "position": [
+      0.1,
+      -1.55,
+      0.82
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_equation",
+     "uid": "a92e7ff2",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.645,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_led",
+     "uid": "74e722e3",
+     "type": "FONT",
+     "position": [
+      2.75,
+      0.0,
+      2.25
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_legend",
+     "uid": "c1c11573",
+     "type": "FONT",
+     "position": [
+      1.4,
+      -0.76,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_resistor",
+     "uid": "b80515c9",
+     "type": "FONT",
+     "position": [
+      0.0,
+      1.3,
+      1.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_status",
+     "uid": "7fda1367",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.55,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_title",
+     "uid": "45f6e9b8",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.78,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "led_1",
+     "uid": "a5ec15d3",
+     "type": "MESH",
+     "position": [
+      2.7,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "resistor_1",
+     "uid": "5ae87ba9",
+     "type": "MESH",
+     "position": [
+      0.0,
+      1.3,
+      0.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_1",
+     "uid": "1d0094d7",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_2",
+     "uid": "9694ec5e",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_3",
+     "uid": "f70b079d",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    }
+   ],
+   "params": {
+    "source_v": 9.0,
+    "resistance_ohm": 330.0,
+    "led_vf": 2.0
+   },
+   "labels": {
+    "label_title": "Why does an LED need a resistor?",
+    "label_battery": "9 V battery",
+    "label_resistor": "Resistor  R = 330 Ω\nvoltage across it: 7.0 V",
+    "label_led": "Red LED\nforward voltage ≈ 2.0 V",
+    "label_current": "I = 21.2 mA",
+    "label_equation": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "label_status": "just above a typical 20 mA rating (limit ~30 mA)",
+    "label_caption": "This is a simplified model where the LED is treated as a fixed 2 volt\ndrop.",
+    "label_legend": "Glowing arrows: conventional current (+ to −), speed proportional to current"
+   },
+   "flow": {
+    "lap_frames": 90.51,
+    "markers": 30,
+    "power_at_show": 1.0,
+    "power_at_start": 0.0
+   },
+   "led": {
+    "emission_at_show": 6.364,
+    "light_w_at_show": 84.85,
+    "status": "high",
+    "status_color": "#FFC04D"
+   },
+   "resistor_bands": [
+    "#E8731A",
+    "#E8731A",
+    "#6B3A1E",
+    "#C9A23A"
+   ]
+  }
+ },
+ {
+  "step": 5,
+  "text": "Okay, go back to the original circuit.",
+  "tool": "end_comparison",
+  "args": {},
+  "events": [
+   {
+    "stage": "understand",
+    "status": "ok",
+    "title": "Got your question",
+    "detail": "Okay, go back to the original circuit."
+   },
+   {
+    "stage": "scene",
+    "status": "start",
+    "title": "Reading the scene",
+    "detail": "asking Blender what it shows right now"
+   },
+   {
+    "stage": "scene",
+    "status": "ok",
+    "title": "Scene read",
+    "detail": "blender 5.2.3 LTS: Circuit in the scene (read back from Blender): battery 9 V, resistor 330 Ω, red LED (forward voltage 2 V). A side-by-side comparison is on screen: left = this circuit (unchanged), right = a what-if copy with a 1,000 Ω resistor."
+   },
+   {
+    "stage": "knowledge",
+    "status": "start",
+    "title": "Looking up the knowledge base",
+    "detail": "concepts, trusted facts, misconceptions (SQLite)"
+   },
+   {
+    "stage": "knowledge",
+    "status": "ok",
+    "title": "1 concept(s), 3 fact(s)",
+    "detail": "Current"
+   },
+   {
+    "stage": "plan",
+    "status": "start",
+    "title": "Choosing what to do",
+    "detail": "Nemotron picks one tool"
+   },
+   {
+    "stage": "plan",
+    "status": "ok",
+    "title": "Tool: end_comparison",
+    "detail": "The user wants to return to the original circuit, removing the side-by-side comparison."
+   },
+   {
+    "stage": "apply",
+    "status": "start",
+    "title": "Removing the what-if copy",
+    "detail": "compare_request_v1 clear"
+   },
+   {
+    "stage": "apply",
+    "status": "ok",
+    "title": "blender 5.2.3 LTS: comparison removed",
+    "detail": ""
+   },
+   {
+    "stage": "verify",
+    "status": "ok",
+    "title": "Read-back: 5/5 checks passed",
+    "detail": ""
+   },
+   {
+    "stage": "turn",
+    "status": "ok",
+    "title": "Done",
+    "detail": ""
+   }
+  ],
+  "reply": "Back to the original circuit: 330 Ω and 21.2 mA. The what-if copy is gone and nothing in the original changed.",
+  "source": "template",
+  "cues": [
+   {
+    "text": "Back to the original circuit: 330 Ω and 21.2 mA. The what-if copy is gone and nothing in the original changed.",
+    "focus": null,
+    "caption": null,
+    "callout": null
+   }
+  ],
+  "camera_moves": [],
+  "seconds": 3.5,
+  "compare": {},
+  "direction": {
+   "focus": "overview",
+   "camera": [
+    1.7,
+    -10.2,
+    6.9
+   ],
+   "moving": false,
+   "halo": null,
+   "caption": "Back to the original circuit: 330 Ω, 21.2 mA.",
+   "targets": [
+    "overview",
+    "battery",
+    "resistor",
+    "led",
+    "current"
+   ],
+   "callout": null,
+   "flow_emphasis": false
+  },
+  "scene_version": [
+   2,
+   3
+  ],
+  "circuit": {
+   "present": true,
+   "frames": {
+    "start": 1,
+    "end": 288,
+    "power_on": [
+     80,
+     92
+    ],
+    "show": 200
+   },
+   "objects": [
+    {
+     "id": "battery_1",
+     "uid": "0d96e11f",
+     "type": "MESH",
+     "position": [
+      -2.75,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "board_1",
+     "uid": "dd1edc33",
+     "type": "MESH",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "flow_1",
+     "uid": "72d23323",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_battery",
+     "uid": "319d8983",
+     "type": "FONT",
+     "position": [
+      -2.75,
+      -0.1,
+      2.45
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_caption",
+     "uid": "09ed573b",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      -0.56,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_current",
+     "uid": "2a4bca61",
+     "type": "FONT",
+     "position": [
+      0.1,
+      -1.55,
+      0.82
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_equation",
+     "uid": "a92e7ff2",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.645,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_led",
+     "uid": "74e722e3",
+     "type": "FONT",
+     "position": [
+      2.75,
+      0.0,
+      2.25
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_legend",
+     "uid": "c1c11573",
+     "type": "FONT",
+     "position": [
+      1.4,
+      -0.76,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_resistor",
+     "uid": "b80515c9",
+     "type": "FONT",
+     "position": [
+      0.0,
+      1.3,
+      1.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "label_status",
+     "uid": "7fda1367",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.55,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "label_title",
+     "uid": "45f6e9b8",
+     "type": "FONT",
+     "position": [
+      -1.4,
+      0.78,
+      -3.0
+     ],
+     "parent": "TD_CircuitCam"
+    },
+    {
+     "id": "led_1",
+     "uid": "a5ec15d3",
+     "type": "MESH",
+     "position": [
+      2.7,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "resistor_1",
+     "uid": "5ae87ba9",
+     "type": "MESH",
+     "position": [
+      0.0,
+      1.3,
+      0.42
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_1",
+     "uid": "1d0094d7",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_2",
+     "uid": "9694ec5e",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    },
+    {
+     "id": "wire_3",
+     "uid": "f70b079d",
+     "type": "CURVE",
+     "position": [
+      0.0,
+      0.0,
+      0.0
+     ],
+     "parent": null
+    }
+   ],
+   "params": {
+    "source_v": 9.0,
+    "resistance_ohm": 330.0,
+    "led_vf": 2.0
+   },
+   "labels": {
+    "label_title": "Why does an LED need a resistor?",
+    "label_battery": "9 V battery",
+    "label_resistor": "Resistor  R = 330 Ω\nvoltage across it: 7.0 V",
+    "label_led": "Red LED\nforward voltage ≈ 2.0 V",
+    "label_current": "I = 21.2 mA",
+    "label_equation": "I = (9 V − 2 V) ÷ 330 Ω = 21.2 mA",
+    "label_status": "just above a typical 20 mA rating (limit ~30 mA)",
+    "label_caption": "Back to the original circuit: 330 Ω, 21.2 mA.",
+    "label_legend": "Glowing arrows: conventional current (+ to −), speed proportional to current"
+   },
+   "flow": {
+    "lap_frames": 90.51,
+    "markers": 30,
+    "power_at_show": 1.0,
+    "power_at_start": 0.0
+   },
+   "led": {
+    "emission_at_show": 6.364,
+    "light_w_at_show": 84.85,
+    "status": "high",
+    "status_color": "#FFC04D"
+   },
+   "resistor_bands": [
+    "#E8731A",
+    "#E8731A",
+    "#6B3A1E",
+    "#C9A23A"
+   ]
+  }
+ }
+]

@@ -91,6 +91,18 @@ API: GET /api/state, POST /api/turn {text} (409 busy), POST /api/voice <audio> (
 POST /api/tts {text}, POST /api/direct {focus, caption}, POST /api/reset, GET /api/events (SSE, ?since=),
 GET /api/snapshot/<name>, GET /api/knowledge. Tests: test_server.py, test_stage_voice.py.
 
+## What-If Lab (docs/WHATIF.md)
+Tutor tools `tour_circuit {stops}` (camera tour: `stage.tour_cues`, one narrated sentence per stop enforced by
+`explain(shape_check=)`, callouts from `tutor.tour_callouts`) / `compare_resistance {resistance_ohm|direction}` /
+`end_comparison`. `direct_request_v1` gained `callout {value<=24, note<=80}` (big top-right measurement; a focus
+without one removes it); focus `current` emphasises the arrows. Split reality = `{"kind":"compare"}`
+(`shared/schema/compare_request_v1.json`, additive) -> `blender_engine/compare.py`: duplicates the lesson into
+`TD_Compare` (+8.6 m x), what-if values on the copy, headlines/divider/legend, hides+restores the lesson HUD, frame_start
+100; original untouched; `clear` removes all of it; circuit/lesson requests clear it first. Director verifies with
+`check.run_compare` (13 checks). Server emits `direct` events (Activity "camera"). Worker `TD_DIRECT_SNAPSHOT=1`
+renders camera moves (e2e evidence). Checks: `blender -b --factory-startup --python blender_engine/compare_check.py`,
+`python -m director.dev.whatif_e2e [--mock]` (private bridge `shared/state/whatif_run`).
+
 ## Knowledge base (P1: director/knowledge/, docs/KNOWLEDGE.md)
 `seed.json` (reviewed, in git) -> SQLite `<shared>/state/knowledge.sqlite` (`TD_KNOWLEDGE_DB`; auto-rebuilt when the
 seed changes; tests use a tmp DB via conftest). `python -m director.knowledge build|stats|query "..."|graph`.

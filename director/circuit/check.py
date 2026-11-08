@@ -89,6 +89,66 @@ def run(request: dict, before: dict | None, result: dict) -> list[Check]:
     return checks
 
 
+def _same_original(before: dict | None, circ: dict, add) -> None:
+    """The lesson on stage before the comparison is still exactly there (same objects, values, animation)."""
+    b = (before or {}).get("circuit") or {}
+    if not b.get("present"):
+        return
+    key = lambda c: {o["id"]: (o["uid"], o["position"]) for o in c.get("objects", [])}  # noqa: E731
+    add(key(circ) == key(b), "original circuit: same objects, same uid, same position",
+        f"{len(circ.get('objects', []))} objects")
+    add(circ.get("params") == b.get("params"), "original circuit values unchanged",
+        f"R={circ.get('params', {}).get('resistance_ohm')}")
+    labels = lambda c: {k: v for k, v in (c.get("labels") or {}).items() if k != "label_caption"}  # noqa: E731
+    add(labels(circ) == labels(b) and circ.get("flow") == b.get("flow") and circ.get("led") == b.get("led"),
+        "original labels, current arrows and LED glow unchanged")
+
+
+def run_compare(request: dict, before: dict | None, result: dict) -> list[Check]:
+    """request = compare_request_v1 sent; before = inspect result; result = worker's answer (circuit, compare,
+    direction read-backs). Show: the what-if copy matches the calculation and the original is untouched.
+    Clear: the copy is gone and the original is untouched."""
+    checks: list[Check] = []
+    add = lambda ok, what, detail="": checks.append(Check(bool(ok), what, detail))  # noqa: E731
+    cmp, circ = result.get("compare") or {}, result.get("circuit") or {}
+    add(result.get("status") == "ok" and result.get("applied") == 1, "Blender applied the comparison request",
+        f"status={result.get('status')} errors={result.get('errors')}")
+    _same_original(before, circ, add)
+    if request["action"] == "clear":
+        add(not cmp.get("active"), "the what-if copy is removed", "")
+        return checks
+    alt, want_c = cmp.get("alternative") or {}, request["alternative"]["circuit"]
+    want_d = request["alternative"]["display"]
+    add(cmp.get("active") and not cmp.get("error"), "the what-if copy exists", cmp.get("error", ""))
+    got_p = alt.get("params") or {}
+    add(all(_close(got_p.get(k), want_c[k], 1e-9) for k in want_c), "what-if values stored on the copy",
+        f"R={got_p.get('resistance_ohm')}")
+    if got_p:
+        stored = solve(LedCircuit.from_dict(got_p))
+        add((alt.get("labels") or {}).get("label_current") == f"I = {format_ma(stored.current_ma)}",
+            "what-if current label matches I recomputed from the copy's stored values",
+            f"{(alt.get('labels') or {}).get('label_current')!r} vs {format_ma(stored.current_ma)}")
+    wrong = [k for k, v in (alt.get("labels") or {}).items() if want_d["labels"].get(k) != v]
+    add(alt.get("labels") and not wrong, "what-if labels show the calculated text", ", ".join(wrong))
+    flow = alt.get("flow") or {}
+    add(_close(flow.get("lap_frames"), want_d["flow_lap_frames"], 0.02) and
+        _close(flow.get("power"), 1.0 if want_d["flow_lap_frames"] else 0.0, 1e-3),
+        "what-if arrow speed matches its calculated current",
+        f"lap {flow.get('lap_frames')} frames, want {want_d['flow_lap_frames']}")
+    led = alt.get("led") or {}
+    add(_close(led.get("emission"), want_d["led_emission"], 0.01) and led.get("status") == want_d["led_status"],
+        "what-if LED glow matches its calculated current (illustrative)",
+        f"emission {led.get('emission')} want {want_d['led_emission']}")
+    bands = alt.get("resistor_bands") or []
+    add(len(bands) == 4 and all(_hex_close(a, b) for a, b in zip(bands, want_d["resistor_bands"])),
+        "what-if resistor color bands match its value", " ".join(want_d.get("resistor_band_names", [])))
+    add(cmp.get("headlines") == request["headlines"], "headlines show both calculations",
+        " | ".join((cmp.get("headlines") or {}).values()).replace("\n", " "))
+    add((result.get("direction") or {}).get("focus") == "compare", "camera frames both circuits",
+        f"focus = {(result.get('direction') or {}).get('focus')}")
+    return checks
+
+
 def summary(checks: list[Check]) -> str:
     bad = sum(not c.ok for c in checks)
     return f"{len(checks) - bad}/{len(checks)} checks passed" + (f", {bad} FAILED" if bad else "")

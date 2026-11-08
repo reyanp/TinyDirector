@@ -114,14 +114,68 @@ def _validator() -> Draft202012Validator:
     return Draft202012Validator(json.loads((paths.SCHEMA_DIR / "direct_request_v1.json").read_text(encoding="utf-8")))
 
 
+def tour_cues(text: str, stops: list[str], callouts: dict) -> list[dict]:
+    """A guided tour: the camera visits `stops` in order while Poyo narrates. Each spoken piece goes to the stop
+    it names (keywords, never going backwards); if that misses a stop, the pieces are shared out evenly.
+    `callouts` {stop: {"value", "note"} | None} come from the calculation module."""
+    pieces = sentences(text)
+    if len(pieces) == len(stops):  # the narration was written (and checked) as one sentence per stop
+        return [{"text": s, "focus": t, "caption": wrap_caption(s), "callout": callouts.get(t)}
+                for s, t in zip(pieces, stops)]
+    if len(pieces) < len(stops):
+        pieces = segments(text)
+    idx, at = [], 0
+    for i, s in enumerate(pieces):
+        named = _first(s, [(t, rx) for t, rx in CIRCUIT_WORDS if t in stops[at:]])
+        if i == 0:
+            at = 0
+        elif named is not None:
+            at = max(at, stops.index(named))
+        idx.append(at)
+    if set(idx) != set(range(len(stops))) and len(pieces) >= len(stops):
+        idx = [i * len(stops) // len(pieces) for i in range(len(pieces))]
+    if pieces and stops[-1] == "overview" and len(pieces) >= 2:
+        idx[-1] = len(stops) - 1  # the tour always ends on the whole circuit
+    return [{"text": s, "focus": stops[k], "caption": wrap_caption(s), "callout": callouts.get(stops[k])}
+            for s, k in zip(pieces, idx)]
+
+
+SIDE_WORDS = {"alternative": r"(?i:\bwhat-?if\b|\bright\b|\bthe copy\b|\bnew one\b)",
+              "baseline": r"(?i:\boriginal\b|\bleft\b|\bcurrent one\b)"}
+
+
+def compare_cues(text: str, sides: dict, callouts: dict) -> list[dict]:
+    """Split-reality comparison: a piece that names the what-if values (its resistance or current) looks at the
+    right-hand copy, one naming the circuit's own values at the original, otherwise both. `sides`
+    {"baseline"|"alternative": (resistance_ohm, current_ma)} are calculated values."""
+    from .circuit.agent import _tokens
+
+    def side_of(piece: str) -> str | None:
+        for _, v, cls in _tokens(piece):  # the earliest calculated value in the piece decides
+            for side, (ohms, ma) in sides.items():
+                if (cls == "resistance" and abs(v - ohms) <= max(0.5, ohms * 0.01)) or \
+                        (cls == "current" and abs(v - ma) <= 0.55):
+                    return side
+        return _first(piece, list(SIDE_WORDS.items()))
+
+    pieces = segments(text)
+    out, focus = [], "compare"
+    for i, s in enumerate(pieces):  # an unnamed piece ("so its LED is dimmer") stays on the side just named
+        focus = "compare" if i == len(pieces) - 1 and len(pieces) > 2 else side_of(s) or focus
+        out.append({"text": s, "focus": focus, "caption": wrap_caption(s), "callout": callouts.get(focus)})
+    return out
+
+
 def direct_request(focus: str | None = None, caption: str | None = None, transition_s: float = 0.9,
-                   highlight: bool = True) -> dict:
+                   highlight: bool = True, callout: dict | None = None) -> dict:
     req = {"kind": "direct", "schema_version": 1, "request_id": f"direct-{time.strftime('%H%M%S')}-{time.time_ns() % 10**6}",
            "transition_s": transition_s, "highlight": highlight}
     if focus is not None:
         req["focus"] = focus
     if caption is not None:
         req["caption"] = caption[:400]
+    if callout is not None:
+        req["callout"] = callout
     errs = [e.message for e in _validator().iter_errors(req)]
     if errs:
         raise ValueError("invalid direct request: " + "; ".join(errs))

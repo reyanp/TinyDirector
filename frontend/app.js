@@ -21,7 +21,7 @@ const els = {
 const STAGE_LABEL = {
   understand: "understand", scene: "scene", plan: "plan", calculate: "calculate", director: "director",
   builder: "builder", blender: "blender", verify: "verify", load: "load", apply: "blender", explain: "explain",
-  turn: "done", knowledge: "knowledge", listen: "listen",
+  turn: "done", knowledge: "knowledge", listen: "listen", direct: "camera",
 };
 const PIPELINE = [
   ["listen", ["listen"]], ["understand", ["understand", "scene"]], ["recall", ["knowledge"]], ["plan", ["plan"]],
@@ -458,7 +458,10 @@ function fireCue(cue, kind) {
   subtitle(cue.text);
   if (!kind) return;
   const body = {};
-  if (cue.focus && cue.focus !== lastFocus) { body.focus = cue.focus; lastFocus = cue.focus; }
+  if (cue.focus && cue.focus !== lastFocus) {   // a tour / comparison cue brings its calculated measurement
+    body.focus = cue.focus; lastFocus = cue.focus;
+    if (cue.callout) body.callout = cue.callout;
+  }
   if (cue.caption) body.caption = cue.caption;
   if (Object.keys(body).length) direct(body);
 }
@@ -622,11 +625,12 @@ async function onEvent(ev) {
     await refresh();
     const d = ev.data || {};
     status(ev.status === "ok" ? "Done" : ev.title, ev.status === "ok" ? "" : "error");
-    if (d.scene_changed) lastFocus = null;   // a new or updated scene: the next cue re-aims the camera
+    lastFocus = null;   // every reply re-aims the camera on its first cue (and replaces the last callout)
     if (d.reply) enqueueSpeech(d.reply, (d.stage || {}).cues, (d.stage || {}).kind);
     else if (ev.status === "error") { subtitle(ev.detail || ev.title, { dim: true }); setMood("error", 1100); }
     return;
   }
+  if (ev.stage === "direct") return;   // camera moves while Poyo speaks: listed in Activity, no status change
   if (ev.status === "start") { status(`${ev.title}…`, "working"); if (mood !== "speaking") setMood("thinking"); }
   else if (ev.status === "error") { status(ev.title, "error"); if (mood !== "speaking") setMood("error", 1100); }
   else if (ev.stage !== "listen") status(ev.title, "working");

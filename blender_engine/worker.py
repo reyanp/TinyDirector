@@ -3,6 +3,8 @@
 Start it (Windows):   powershell -ExecutionPolicy Bypass -File blender_engine\\run_blender.ps1
 Or by hand:           blender --python blender_engine/worker.py
 Or inside an open Blender: Scripting tab -> Open this file -> Run Script.
+Request kinds: plan (v1 ops), inspect, circuit, lesson, direct (camera / caption / callout), compare
+(split-reality comparison beside the circuit: blender_engine/compare.py).
 Options after `--`:   --keep         keep TinyDirector objects from a previous session
                       --once         process the inbox once and quit (headless tests)
                       --loop         headless (-b) only: block and poll the inbox until killed
@@ -57,9 +59,10 @@ if str(ROOT) not in sys.path:
 
 import bpy  # noqa: E402
 
-from blender_engine import circuit, direction, engine, lesson_loader, snapshot  # noqa: E402
+from blender_engine import circuit, compare, direction, engine, lesson_loader, snapshot  # noqa: E402
 
 SNAPSHOTS = os.environ.get("TD_SNAPSHOT", "1") != "0"
+DIRECT_SNAPSHOTS = os.environ.get("TD_DIRECT_SNAPSHOT", "0") == "1"  # e2e evidence: render camera moves too
 SHARED = Path(os.environ["TD_SHARED_DIR"]).resolve() if os.environ.get("TD_SHARED_DIR") else ROOT / "shared"
 INBOX = SHARED / "inbox"
 OUTBOX = SHARED / "outbox"
@@ -105,6 +108,8 @@ def _inspect(rid: str) -> dict:
                                    if not (bpy.data.objects.get(o["name"]) or {}).get("lesson_part")]
     if lesson is not None or "lesson" in result:
         result["direction"] = direction.read_back()
+    if compare.active():
+        result["compare"] = compare.read_back()
     return result
 
 
@@ -209,12 +214,16 @@ def process_inbox() -> int:
                 continue
             if isinstance(plan, dict) and plan.get("kind") == "direct":
                 result = direction.make_result(rid, plan)  # display only: applied = 0, no snapshot
+            elif isinstance(plan, dict) and plan.get("kind") == "compare":
+                result = compare.make_result(rid, plan)  # split-reality comparison (show / clear)
             elif isinstance(plan, dict) and plan.get("kind") == "circuit":
+                compare.clear(move_camera=plan.get("action") == "update")  # a lesson change ends a comparison
                 if plan.get("action") == "build":
                     lesson_loader.clear()  # one lesson on screen at a time
                     direction.clear()
                 result = circuit.make_result(rid, plan)
             elif isinstance(plan, dict) and plan.get("kind") == "lesson":
+                compare.clear(move_camera=False)
                 direction.clear()
                 result = lesson_loader.make_result(rid, plan, [SHARED, ROOT / "shared"])
             else:
@@ -226,11 +235,12 @@ def process_inbox() -> int:
             result = {"schema_version": 1, "request_id": rid, "status": "error", "applied": 0,
                       "errors": [f"{type(exc).__name__}: {exc}"], "scene_version": engine.scene_version(),
                       "scene_objects": engine.read_scene()}
-        if SNAPSHOTS and result.get("applied"):
+        is_direct = isinstance(plan, dict) and plan.get("kind") == "direct"
+        if SNAPSHOTS and (result.get("applied") or (DIRECT_SNAPSHOTS and is_direct and result.get("status") == "ok")):
             # render BEFORE writing the result so the image exists when the director sees the JSON
             try:
                 t0 = time.perf_counter()
-                if result.get("circuit_action"):  # lesson camera + EEVEE, at a powered-on frame
+                if result.get("circuit_action") or "compare" in result or is_direct:  # camera + EEVEE, powered on
                     circuit.render_preview(OUTBOX / f"{rid}.jpg", 960, 540, samples=16, file_format="JPEG")
                 elif result.get("lesson_action"):
                     circuit.render_preview(OUTBOX / f"{rid}.jpg", 960, 540, frame=bpy.context.scene.frame_end,

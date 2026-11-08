@@ -122,3 +122,25 @@ def circuit_request(request_id: str, action: str, circuit: LedCircuit, caption: 
     sol = solve(circuit)
     return {"kind": "circuit", "schema_version": 1, "request_id": request_id, "action": action,
             "circuit": circuit.as_dict(), "display": display_for(sol, caption, title)}
+
+
+COMPARE_LEGEND = ("Left: the circuit now · right: the what-if. Arrow speed and LED glow are illustrative,\n"
+                  "scaled with the calculated current (not electron speed or measured brightness).")
+
+
+def compare_request(request_id: str, baseline: LedCircuit, alternative: LedCircuit) -> dict:
+    """A compare_request_v1 'show' document: the circuit on stage (baseline, unchanged) beside a what-if copy.
+    Every number and label comes from model.solve() via display_for(); Blender only draws it."""
+    sa, sb = solve(baseline), solve(alternative)
+    return {"kind": "compare", "schema_version": 1, "request_id": request_id, "action": "show",
+            "baseline": {"circuit": baseline.as_dict()},
+            "alternative": {"circuit": alternative.as_dict(), "display": display_for(sb)},
+            "headlines": {"baseline": f"NOW  ·  R = {format_ohms(baseline.resistance_ohm)}\n{equation_text(sa)}",
+                          "alternative": f"WHAT IF  ·  R = {format_ohms(alternative.resistance_ohm)}\n"
+                                         f"{equation_text(sb)}"},
+            "title": f"What if the resistor were {format_ohms(alternative.resistance_ohm)}?",
+            "legend": COMPARE_LEGEND}
+
+
+def compare_clear_request(request_id: str) -> dict:
+    return {"kind": "compare", "schema_version": 1, "request_id": request_id, "action": "clear"}

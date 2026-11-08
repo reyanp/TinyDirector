@@ -17,6 +17,8 @@ POSITIONS = {"board_1": [0.1, 0, 0], "battery_1": [-2.75, 0, 0], "resistor_1": [
              "led_1": [2.7, 0, 0], "wire_1": [0, 0, 0], "wire_2": [0, 0, 0], "wire_3": [0, 0, 0],
              "flow_1": [0, 0, 0]}
 DIRECT_TARGETS = ("battery", "resistor", "led", "current", "overview")
+COMPARE_TARGETS = ("compare", "baseline", "alternative")
+WORLD_LABELS = ("label_battery", "label_resistor", "label_led", "label_current")
 
 
 class SimulatedCircuitExecutor:
@@ -41,17 +43,59 @@ class SimulatedCircuitExecutor:
                 "scene_objects": copy.deepcopy(self.state["scene_objects"]), "executor": "simulated",
                 "circuit": copy.deepcopy(self.state["circuit"])}
 
+    def _targets(self) -> list[str]:
+        return list(DIRECT_TARGETS) + (list(COMPARE_TARGETS) if self.state.get("compare") else [])
+
     def _direction(self) -> dict:
         d = self.state.setdefault("direction", {"focus": None, "caption": None})
         return {"focus": d["focus"], "camera": None, "moving": False,
                 "halo": d["focus"] if d["focus"] in ("battery", "resistor", "led") else None,
-                "caption": d["caption"], "targets": list(DIRECT_TARGETS), "executor": "simulated"}
+                "caption": d["caption"], "callout": d.get("callout"), "flow_emphasis": d["focus"] == "current",
+                "targets": self._targets(), "executor": "simulated"}
+
+    def _compare(self) -> dict:
+        c = self.state.get("compare")
+        if not c:
+            return {"active": False}
+        d = c["alternative"]["display"]
+        return {"active": True, "executor": "simulated", "objects": 22,
+                "alternative": {"params": dict(c["alternative"]["circuit"]),
+                                "labels": {k: d["labels"][k] for k in WORLD_LABELS},
+                                "flow": {"lap_frames": d["flow_lap_frames"], "markers": d["flow_markers"],
+                                         "power": 1.0 if d["flow_lap_frames"] else 0.0},
+                                "led": {"emission": d["led_emission"], "light_w": d["led_light_w"],
+                                        "status": d["led_status"]},
+                                "resistor_bands": [b.upper() for b in d["resistor_bands"]]},
+                "headlines": dict(c["headlines"]), "title": c["title"], "legend": c["legend"]}
 
     def inspect(self) -> dict:
         out = {**self._result("inspect_sim"), "kind": "inspect"}
         if (self.state["circuit"] or {}).get("present"):
             out["direction"] = self._direction()
+        if self.state.get("compare"):
+            out["compare"] = self._compare()
         return out
+
+    def _compare_request(self, req: dict) -> dict:
+        """SIMULATED split-reality comparison (blender_engine/compare.py): records the what-if copy; draws nothing."""
+        rid = req["request_id"]
+        circ = self.state["circuit"] or {}
+        d = self.state.setdefault("direction", {"focus": None, "caption": None})
+        if req["action"] == "clear":
+            if self.state.pop("compare", None) is not None:
+                d.update(focus="overview", callout=None)
+        else:
+            if not circ.get("present"):
+                return {**self._result(rid, "error", 0, ["no LED circuit on stage to compare; build the lesson first"]),
+                        "compare": self._compare()}
+            if req["baseline"]["circuit"] != circ["params"]:
+                return {**self._result(rid, "error", 0, ["baseline does not match the circuit on stage"]),
+                        "compare": self._compare()}
+            self.state["compare"] = copy.deepcopy(req)
+            d.update(focus="compare", callout=None)
+        self.state["scene_version"] += 1
+        self._save()
+        return {**self._result(rid, "ok", 1), "compare": self._compare(), "direction": self._direction()}
 
     def _direct(self, req: dict) -> dict:
         """SIMULATED stage direction (blender_engine/direction.py): records focus + caption, moves no camera."""
@@ -59,23 +103,28 @@ class SimulatedCircuitExecutor:
         if not (self.state["circuit"] or {}).get("present"):
             return self._result(rid, "error", 0, ["nothing on stage to direct"])
         focus = req.get("focus")
-        if focus is not None and focus not in DIRECT_TARGETS:
+        if focus is not None and focus not in self._targets():
             return self._result(rid, "error", 0, [f"unknown focus target {focus!r}"])
         d = self.state.setdefault("direction", {"focus": None, "caption": None})
         if focus is not None:
             d["focus"] = focus  # like Blender: "overview" is remembered as the focus
         if req.get("caption") is not None:
             d["caption"] = req["caption"]
+        if focus is not None or "callout" in req:  # like Blender: a new focus without a callout removes it
+            d["callout"] = req.get("callout")
         self._save()
         return {**self._result(rid, "ok", 0), "direction": self._direction()}
 
     def send(self, req: dict, timeout: float | None = None) -> dict:  # timeout: bridge parity, unused
         if req.get("kind") == "direct":
             return self._direct(req)
+        if req.get("kind") == "compare":
+            return self._compare_request(req)
         rid = req["request_id"]
         circ = self.state["circuit"]
         if req["action"] == "update" and not (circ and circ.get("present")):
             return self._result(rid, "error", 0, ["no lesson circuit in the scene to update; build it first"])
+        self.state.pop("compare", None)  # like the worker: a circuit request ends a comparison first
         if req["action"] == "build":
             self.state["direction"] = {"focus": None, "caption": None}
         if req["action"] == "build" or circ is None:

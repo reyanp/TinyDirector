@@ -48,6 +48,10 @@ dimmer?" (explained without touching the scene). Voice uses OpenAI speech-to-tex
 Nemotron still decides every turn. The Type tab in the details drawer is the text fallback. Offline:
 `python -m director.studio --mock --simulate` (labeled MOCK / SIMULATED). See [docs/STUDIO.md](docs/STUDIO.md).
 
+**What-If Lab.** Say "Poyo, show me what's happening inside this circuit" for a camera tour with calculated
+callouts, or "Compare what happens if I increase the resistor to 1,000 ohms" for a side-by-side what-if copy
+(the original stays untouched; "go back to the original" removes it). See [docs/WHATIF.md](docs/WHATIF.md).
+
 ## Knowledge base
 A SQLite knowledge base (`director/knowledge/`, built from the reviewed `seed.json`) holds concepts, prerequisites,
 cited facts, common misconceptions, demo templates and links to the calculators and verifiers. Every turn retrieves

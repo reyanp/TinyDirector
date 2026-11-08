@@ -2,22 +2,84 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://tinydirector.local/schema/direct_request_v1.json",
   "title": "TinyDirector stage direction request v1 (ADDITIVE: does not change any other schema)",
-  "description": "Written by the director to shared/inbox/<request_id>.json to direct the lesson already on stage: move the camera to a part, ring it with a highlight, or replace the subtitle caption. Display only: no lesson value changes, nothing is built. The worker answers with a scene_result_v1 document (applied = 0) plus a 'direction' read-back block (blender_engine/direction.py).",
+  "description": "Written by the director to shared/inbox/<request_id>.json to direct the lesson already on stage: move the camera to a part, ring it with a highlight, replace the subtitle caption, or show a large measurement callout. Display only: no lesson value changes, nothing is built. The worker answers with a scene_result_v1 document (applied = 0) plus a 'direction' read-back block (blender_engine/direction.py).",
   "type": "object",
   "additionalProperties": false,
-  "required": ["kind", "schema_version", "request_id"],
-  "anyOf": [{ "required": ["focus"] }, { "required": ["caption"] }],
+  "required": [
+    "kind",
+    "schema_version",
+    "request_id"
+  ],
+  "anyOf": [
+    {
+      "required": [
+        "focus"
+      ]
+    },
+    {
+      "required": [
+        "caption"
+      ]
+    },
+    {
+      "required": [
+        "callout"
+      ]
+    }
+  ],
   "properties": {
-    "kind": { "const": "direct" },
-    "schema_version": { "const": 1 },
-    "request_id": { "type": "string", "pattern": "^[A-Za-z0-9_\\-]{1,80}$" },
+    "kind": {
+      "const": "direct"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_\\-]{1,80}$"
+    },
     "focus": {
       "type": "string",
       "pattern": "^[A-Za-z0-9_\\-]{1,40}$",
       "description": "LED circuit: battery | resistor | led | current (the whole loop) | overview (the lesson camera's own framing); generated lesson: a part id, or overview"
     },
-    "highlight": { "type": "boolean", "default": true, "description": "ring the focused part with a glowing halo" },
-    "caption": { "type": "string", "maxLength": 400, "description": "new text for the circuit lesson's subtitle caption" },
-    "transition_s": { "type": "number", "minimum": 0, "maximum": 3, "default": 0.9 }
+    "highlight": {
+      "type": "boolean",
+      "default": true,
+      "description": "ring the focused part with a glowing halo"
+    },
+    "caption": {
+      "type": "string",
+      "maxLength": 400,
+      "description": "new text for the circuit lesson's subtitle caption"
+    },
+    "transition_s": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 3,
+      "default": 0.9
+    },
+    "callout": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "value"
+      ],
+      "description": "large measurement text shown with the focus (e.g. '21.2 mA' + a short note); values come from the calculation module; null removes it. Sending a focus without a callout removes the previous one.",
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 24
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 80
+        }
+      }
+    }
   }
 }

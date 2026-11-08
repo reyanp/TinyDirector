@@ -61,6 +61,9 @@ OpenAI key the drawer's Type tab still works, and the browser's own `speechSynth
 | "Increase the resistance." / "make it smaller" | `adjust_resistance` | `step_resistance` picks the next E6 value (330 → 1,000 → 3,300) |
 | "Why?" / "Why did it get dimmer?" / "simpler, please" | `explain` | nothing is sent; answered about the circuit on screen |
 | "Show me the resistor." / "Zoom out." | `focus_camera` | camera only (`direct_request_v1`); the reply quotes calculated values |
+| "Show me what's happening inside this circuit." | `tour_circuit` | camera tour: halo + calculated callout per stop, one narrated sentence each ([WHATIF.md](WHATIF.md)) |
+| "Compare what happens if I use 1,000 ohms." | `compare_resistance` | a what-if copy beside the unchanged original (`compare_request_v1`) |
+| "Go back to the original." | `end_comparison` | the copy is removed; the original is checked to be exactly as before |
 | a new topic (BJT vs MOSFET, voltage divider) | `teach_topic` | the multi-agent lesson pipeline |
 | parallel circuits | `explain_concept` | nothing; explanation only (no demo yet) |
 | off-topic | `clarify` | nothing |

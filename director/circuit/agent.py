@@ -21,6 +21,7 @@ from ..planner import extract_json
 from ..trace import Trace
 from .model import R_MAX_OHM, R_MIN_OHM, LedCircuit, Solution, format_ma, format_ohms, format_volts, solve
 
+TOUR_STOPS = ("battery", "resistor", "current", "led", "overview")
 TOOLS = {
     "teach_led_resistor": "Start (or continue) the lesson 'Why does an LED need a resistor?'. Builds the 3D circuit "
                           "if it is not in the scene yet. args: {} or {\"resistance_ohm\": number}",
@@ -34,6 +35,17 @@ TOOLS = {
     "focus_camera": "Only point the camera at something on screen, no explanation asked ('show me the resistor', "
                     "'zoom in on the LED', 'look at the current', 'zoom out'). args: {\"target\": \"battery\" | "
                     "\"resistor\" | \"led\" | \"current\" | \"overview\"}",
+    "tour_circuit": "A guided camera tour of the circuit ON SCREEN ('show me what's happening inside this circuit', "
+                    "'walk me through it'). Choose 2 to 5 stops in a good teaching order from battery, resistor, "
+                    "current, led, and end with overview; the camera visits them while you narrate, and the "
+                    "calculation module supplies each stop's measurement. args: {\"stops\": [\"battery\", "
+                    "\"resistor\", \"current\", \"led\", \"overview\"]}",
+    "compare_resistance": "Show the circuit on screen SIDE BY SIDE with a what-if copy that has another resistor, "
+                          "WITHOUT changing the original ('compare what happens if I use 1,000 ohms', 'show both', "
+                          "'side by side'). args: {\"resistance_ohm\": number} or, with no value given, "
+                          "{\"direction\": \"increase\" or \"decrease\"}",
+    "end_comparison": "Remove the side-by-side comparison and go back to the original circuit ('go back', 'back to "
+                      "the original', 'stop comparing', 'remove the copy'). args: {}",
     "explain": "Answer a question about the circuit WITHOUT changing it (e.g. 'why is it dimmer?', 'what does the "
                "resistor do?', 'what if there were no resistor?'). args: {\"question\": string}",
     "teach_topic": "The user wants to learn a DIFFERENT electronics idea that needs a different circuit (e.g. BJT vs "
@@ -73,6 +85,18 @@ TOOL_SCHEMA = {
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["target"],
                                           "properties": {"target": {"enum": ["battery", "resistor", "led", "current",
                                                                              "overview"]}}}}}},
+        {"if": {"properties": {"tool": {"const": "tour_circuit"}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["stops"],
+                                          "properties": {"stops": {"type": "array", "minItems": 2, "maxItems": 6,
+                                                                   "uniqueItems": True,
+                                                                   "items": {"enum": list(TOUR_STOPS)}}}}}}},
+        {"if": {"properties": {"tool": {"const": "compare_resistance"}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "minProperties": 1,
+                                          "maxProperties": 1,
+                                          "properties": {"resistance_ohm": {"type": "number"},
+                                                         "direction": {"enum": ["increase", "decrease"]}}}}}},
+        {"if": {"properties": {"tool": {"const": "end_comparison"}}},
+         "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "maxProperties": 0}}}},
         {"if": {"properties": {"tool": {"const": "explain"}}},
          "then": {"properties": {"args": {"type": "object", "additionalProperties": False, "required": ["question"],
                                           "properties": {"question": {"type": "string", "maxLength": 500}}}}}},
@@ -107,6 +131,13 @@ Rules:
 - "Why?", "why did it get dimmer?", "what does that mean?" -> explain: answer about what is already on screen;
   never rebuild or change it for a question.
 - Only moving the view ("show me / zoom in on / look at the resistor", "zoom out") -> focus_camera.
+- "Show me what's happening inside this circuit", "walk me through it", "give me a tour" (circuit on screen)
+  -> tour_circuit; pick the stops that explain it best, e.g. battery -> resistor -> current -> led -> overview.
+- "Compare ...", "side by side", "show both", "what would change if ..." with the word compare/both/side by side
+  -> compare_resistance (the original stays; a what-if copy appears beside it). Without those words, a new value
+  -> set_resistance.
+- When <circuit_state> says a comparison is on screen: "go back", "back to the original", "stop comparing" ->
+  end_comparison; questions about the two circuits -> explain.
 - "Teach me ..." / "show me ..." / "why do LEDs need resistors?" with no specific value -> teach_led_resistor.
 - Anything about removing the resistor, or why it is dimmer/brighter -> explain (the scene keeps its values).
 - A question about other components or circuits (transistors, MOSFETs, voltage dividers, ...) -> teach_topic,
@@ -156,8 +187,13 @@ class ToolError(RuntimeError):
 
 # ---------------- tool selection ----------------
 
-def describe_state(current: LedCircuit | None, lesson_title: str | None = None, focus: str | None = None) -> str:
+def describe_state(current: LedCircuit | None, lesson_title: str | None = None, focus: str | None = None,
+                   compare: dict | None = None) -> str:
     """What Blender reports is on stage (read back, never assumed)."""
+    if current is not None and compare and compare.get("active"):
+        alt = (compare.get("alternative") or {}).get("params") or {}
+        return (describe_state(current) + " A side-by-side comparison is on screen: left = this circuit (unchanged), "
+                f"right = a what-if copy with a {format_ohms(alt.get('resistance_ohm', 0))} resistor.")
     if current is None:
         if lesson_title:
             return (f"No LED circuit on screen; a generated lesson is: {lesson_title!r}."
@@ -337,9 +373,12 @@ correct a misconception the learner shows. It is NOT a source of numbers: use a 
 """
 
 
-def explain(facts: dict, client: ModelClient, trace: Trace, knowledge: str = "", claim_check=None) -> Explanation:
+def explain(facts: dict, client: ModelClient, trace: Trace, knowledge: str = "", claim_check=None,
+            shape_check=None) -> Explanation:
     """`knowledge`: prompt block from the knowledge base (system prompt; never part of the number check).
-    `claim_check(text) -> [problems]`: rejects text that states a known misconception (1 retry, then template)."""
+    `claim_check(text) -> [problems]`: rejects text that states a known misconception (1 retry, then template).
+    `shape_check(text) -> problem | None`: rejects text with the wrong structure (e.g. a tour needs one sentence per
+    stop so the camera can follow it); same 1 retry, then template."""
     system = EXPLAIN_PROMPT + (KNOWLEDGE_NOTE + "KNOWLEDGE:\n" + knowledge if knowledge else "")
     messages = [{"role": "system", "content": system},
                 {"role": "user", "content": "FACTS (from the calculation module):\n"
@@ -354,20 +393,25 @@ def explain(facts: dict, client: ModelClient, trace: Trace, knowledge: str = "",
         bad = number_check(text, facts)
         too_long = len(text.split()) > 90
         wrong = claim_check(text) if claim_check and text and not bad and not too_long else []
+        shape = shape_check(text) if shape_check and text and not bad and not too_long and not wrong else None
         trace.add("explain", f"{'LIVE' if reply.live else 'MOCK'} {reply.model} explanation attempt {attempt} "
                              f"({reply.latency_s:.1f}s): "
                              + ("numbers verified against the calculation" if not bad and text and not too_long
-                                and not wrong else
-                                f"rejected ({'empty' if not text else 'too long' if too_long else 'states a known misconception: ' + '; '.join(wrong) if wrong else 'numbers not in facts: ' + ', '.join(bad)})"))
-        if text and not bad and not too_long and not wrong:
+                                and not wrong and not shape else
+                                f"rejected ({'empty' if not text else 'too long' if too_long else 'states a known misconception: ' + '; '.join(wrong) if wrong else shape if shape else 'numbers not in facts: ' + ', '.join(bad)})"))
+        if text and not bad and not too_long and not wrong and not shape:
             return Explanation(text, "nemotron" if reply.live else "mock", attempt, rejected)
         rejected.append(text)
         if attempt == 1:
             problem = ("it used numbers that are not in FACTS: " + ", ".join(bad)) if bad else \
                       ("it states a known misconception: " + "; ".join(wrong)) if wrong else \
+                      shape if shape else \
                       ("it was empty" if not text else "it was too long")
             messages = messages + [{"role": "assistant", "content": reply.content[:2000]},
-                                   {"role": "user", "content": f"Rejected: {problem}. Rewrite it in at most 3 short "
-                                                               "sentences using only numbers from FACTS."}]
+                                   {"role": "user", "content": f"Rejected: {problem}. Rewrite it "
+                                                               + ("following FACTS.teaching_goal exactly (short "
+                                                                  "sentences, at most 85 words)" if shape_check else
+                                                                  "in at most 3 short sentences")
+                                                               + " using only numbers from FACTS."}]
     trace.add("explain", "using the deterministic template (model text failed the checks twice)")
     return Explanation(template_explanation(facts), "template", 2, rejected)

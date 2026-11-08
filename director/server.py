@@ -16,7 +16,7 @@ API (JSON):
   POST /api/voice  <audio>    push-to-talk: raw recorded audio (audio/webm, audio/wav, ...) -> speech-to-text ->
                               the same tutor turn as /api/turn (409 busy, 422 nothing heard)
   POST /api/tts  {"text"}     Poyo's voice (audio/mpeg) for a tutor reply or a fixed phrase, nothing else
-  POST /api/direct {"focus", "caption"}  stage direction for the lesson on screen (display only, direct_request_v1)
+  POST /api/direct {"focus", "caption", "callout"}  stage direction for the lesson on screen (display only, direct_request_v1)
 Voice is transport only (director/voice.py): Nemotron still decides every turn and Poyo speaks the verified reply.
 Every event comes from real execution (director/tutor.py, director/lesson/*). Nothing is simulated for show;
 MOCK / SIMULATED modes are labeled in /api/state and in the UI.
@@ -152,21 +152,31 @@ class Session:
         with self.cond:
             return any(m["role"] == "tutor" and text in " ".join(m["text"].split()) for m in self.messages[-20:])
 
-    def direct(self, focus: str | None, caption: str | None) -> tuple[int, dict]:
-        """Stage direction from the browser while Poyo speaks (cue by cue). Display only."""
+    def direct(self, focus: str | None, caption: str | None, callout: dict | None = None) -> tuple[int, dict]:
+        """Stage direction from the browser while Poyo speaks (cue by cue). Display only. A camera move is a real
+        tool action: it shows in the activity feed with Blender's read-back (focus, halo, callout)."""
         from . import stage
         if self.busy:
             return 409, {"error": "a turn is running"}
         try:
-            req = stage.direct_request(focus=focus, caption=caption, transition_s=0.9)
+            req = stage.direct_request(focus=focus, caption=caption, transition_s=0.9, callout=callout)
         except ValueError as exc:
             return 400, {"error": str(exc)}
         try:
             out = self.executor.send(req, timeout=10)
         except Exception as exc:  # noqa: BLE001 - a missed camera move never breaks the lesson
             return 502, {"error": f"{type(exc).__name__}: {str(exc).splitlines()[0][:200]}"}
+        rb = out.get("direction") or {}
+        if focus is not None:  # caption-only updates are too frequent to list
+            ok = out.get("status") == "ok" and rb.get("focus") == focus
+            shown = (rb.get("callout") or {}).get("value")
+            self.emit("direct", "ok" if ok else "error", f"Camera → {focus}",
+                      "; ".join(out.get("errors", [])) or "read-back: focus " + str(rb.get("focus"))
+                      + (f", halo on {rb['halo']}" if rb.get("halo") else "") + (f", callout {shown}" if shown else "")
+                      + (", current arrows emphasised" if rb.get("flow_emphasis") else ""),
+                      focus=focus, callout=rb.get("callout"), simulated=out.get("executor") == "simulated")
         return (200 if out.get("status") == "ok" else 422), {"status": out.get("status"), "errors": out.get("errors", []),
-                                                             "direction": out.get("direction")}
+                                                             "direction": rb, "snapshot": out.get("snapshot")}
 
     def reset(self) -> bool:
         with self.cond:
@@ -291,9 +301,10 @@ def make_handler(session: Session):
             if url.path == "/api/tts":
                 return self._tts(str(body.get("text", "")))
             if url.path == "/api/direct":
-                focus, caption = body.get("focus"), body.get("caption")
+                focus, caption, callout = body.get("focus"), body.get("caption"), body.get("callout")
                 code, out = session.direct(focus if isinstance(focus, str) else None,
-                                           caption if isinstance(caption, str) else None)
+                                           caption if isinstance(caption, str) else None,
+                                           callout if isinstance(callout, dict) else None)
                 return self._json(code, out)
             return self._json(404, {"error": "not found"})
 

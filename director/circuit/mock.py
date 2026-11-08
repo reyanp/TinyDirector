@@ -54,6 +54,18 @@ class TutorMockModel:
         no_circuit = state.startswith("No lesson")
         if any(w in low for w in ("bjt", "mosfet", "transistor", "divider")):
             return {"tool": "teach_topic", "args": {"question": message}, "reason": "new topic"}
+        comparing = "comparison is on screen" in state
+        if comparing and re.search(r"\b(go back|back to the original|original|stop comparing|remove the copy)\b", low):
+            return {"tool": "end_comparison", "args": {}, "reason": "back to the original"}
+        if not no_circuit and re.search(r"\b(compare|side by side|both)\b", low):
+            if ohms is not None:
+                return {"tool": "compare_resistance", "args": {"resistance_ohm": ohms}, "reason": "what-if copy"}
+            up = not re.search(r"\b(decrease|smaller|lower|reduce)\b", low)
+            return {"tool": "compare_resistance", "args": {"direction": "increase" if up else "decrease"},
+                    "reason": "what-if copy, no value"}
+        if not no_circuit and re.search(r"\b(what'?s happening|walk me through|tour|inside (this|the) circuit)\b", low):
+            return {"tool": "tour_circuit", "args": {"stops": ["battery", "resistor", "current", "led", "overview"]},
+                    "reason": "guided tour"}
         if ohms is not None and any(w in low for w in ("resistor", "ohm", "Ω".lower(), "back", "change", "make", "set")):
             return {"tool": "set_resistance", "args": {"resistance_ohm": ohms}, "reason": "user named a value"}
         if not no_circuit and re.search(r"\b(increase|decrease|bigger|smaller|higher|lower|raise|reduce)\b", low) \
@@ -82,6 +94,12 @@ class TutorMockModel:
         if "now" not in f:
             return " ".join(f.get("key_points", []))
         now = f["now"]
+        if "comparison_on_screen" in f:  # a question while both circuits are on screen
+            c = f["comparison_on_screen"]
+            left, right = c["left_circuit_now"], c["right_what_if_copy"]
+            return (f"The left circuit has {left['resistance']} and {left['current']}; the what-if copy on the right "
+                    f"has {right['resistance']} and only {right['current']}. More resistance limits the current, so "
+                    f"its LED glows {'dimmer' if c['what_if_current'] == 'lower' else 'brighter'}.")
         if "before" in f:
             b = f["before"]
             verb = f.get("change", {}).get("current", "changed")

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tinydirector.local/schema/compare_request_v1.json",
+  "title": "TinyDirector split-reality comparison request v1 (ADDITIVE: does not change any other schema)",
+  "description": "Written by the director to shared/inbox/<request_id>.json. 'show' places a what-if copy of the LED circuit that is on stage beside it, with the alternative's values (computed by director/circuit/model.py, drawn by blender_engine/compare.py); the original lesson objects are not changed. 'clear' removes the copy and restores the view. The worker answers with a scene_result_v1 document plus 'circuit', 'compare' and 'direction' read-back blocks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["kind", "schema_version", "request_id", "action"],
+  "properties": {
+    "kind": { "const": "compare" },
+    "schema_version": { "const": 1 },
+    "request_id": { "type": "string", "pattern": "^[A-Za-z0-9_\\-]{1,80}$" },
+    "action": { "enum": ["show", "clear"] },
+    "baseline": {
+      "type": "object", "additionalProperties": false, "required": ["circuit"],
+      "properties": { "circuit": { "$ref": "#/$defs/circuit" } },
+      "description": "must equal the circuit Blender has on stage (checked by the engine)"
+    },
+    "alternative": {
+      "type": "object", "additionalProperties": false, "required": ["circuit", "display"],
+      "properties": {
+        "circuit": { "$ref": "#/$defs/circuit" },
+        "display": { "type": "object", "description": "same shape as circuit_request_v1 display" }
+      }
+    },
+    "headlines": {
+      "type": "object", "additionalProperties": false, "required": ["baseline", "alternative"],
+      "properties": { "baseline": { "type": "string", "maxLength": 160 }, "alternative": { "type": "string", "maxLength": 160 } }
+    },
+    "title": { "type": "string", "maxLength": 160 },
+    "legend": { "type": "string", "maxLength": 240 }
+  },
+  "if": { "properties": { "action": { "const": "show" } } },
+  "then": { "required": ["baseline", "alternative", "headlines", "title", "legend"] },
+  "$defs": {
+    "circuit": {
+      "type": "object", "required": ["source_v", "resistance_ohm", "led_vf"],
+      "properties": {
+        "source_v": { "type": "number", "exclusiveMinimum": 0 },
+        "resistance_ohm": { "type": "number", "exclusiveMinimum": 0 },
+        "led_vf": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    }
+  }
+}
